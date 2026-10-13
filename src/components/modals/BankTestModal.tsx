@@ -147,11 +147,27 @@ export const BankTestModal: React.FC = () => {
           </div>
 
           <div className="bg-[#191d26] p-3 rounded-xl border border-[#2a2e39]">
-            <span className="text-[#787b86] text-[11px] block">Tasa de Comisión</span>
-            <span className="text-[#10b981] font-mono font-bold text-sm flex items-center space-x-1">
-              <Zap className="w-3.5 h-3.5 fill-current text-[#10b981]" />
-              <span>0% FEE PURO</span>
-            </span>
+            <span className="text-[#787b86] text-[11px] block">Régimen Grok (30s)</span>
+            <div className="flex items-center space-x-1 mt-0.5">
+              <span
+                className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold flex items-center space-x-1 border ${
+                  activeRegime?.regime === 'TRENDING'
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : activeRegime?.regime === 'TOXIC_CHOP'
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/30 animate-pulse'
+                    : 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                }`}
+              >
+                <Activity className="w-3 h-3" />
+                <span>
+                  {activeRegime?.regime === 'TRENDING'
+                    ? `TRENDING (${activeRegime.sentiment})`
+                    : activeRegime?.regime === 'TOXIC_CHOP'
+                    ? 'TOXIC CHOP'
+                    : 'RANGING'}
+                </span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -209,15 +225,17 @@ export const BankTestModal: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-[#12151c] text-[#787b86] uppercase font-mono text-[10px] border-b border-[#2a2e39]">
-                    <th className="py-3 px-4"># Sub-Fondo & Estrategia</th>
-                    <th className="py-3 px-3">Ejecución</th>
-                    <th className="py-3 px-3">Filtro MTF</th>
-                    <th className="py-3 px-3">Tendencia MTF</th>
-                    <th className="py-3 px-3">Posición Activa</th>
-                    <th className="py-3 px-3 text-right">Win Rate</th>
-                    <th className="py-3 px-3 text-right">Trades (W/L)</th>
-                    <th className="py-3 px-3 text-right">PnL Puro</th>
-                    <th className="py-3 px-4 text-right">Capital Actual</th>
+                    <th className="py-3 px-3"># Sub-Fondo & Estrategia</th>
+                    <th className="py-3 px-2">Ejecución</th>
+                    <th className="py-3 px-2">Filtro MTF</th>
+                    <th className="py-3 px-2">Tendencia MTF</th>
+                    <th className="py-3 px-2">Posición Activa</th>
+                    <th className="py-3 px-2 text-right">Win Rate</th>
+                    <th className="py-3 px-2 text-right">Trades (W/L)</th>
+                    <th className="py-3 px-3 text-right">PnL Puro (0%)</th>
+                    <th className="py-3 px-3 text-right">PnL Maker (0.01%)</th>
+                    <th className="py-3 px-2 text-right">Max DD %</th>
+                    <th className="py-3 px-3 text-right">Capital Actual</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#2a2e39]/60 font-mono">
@@ -226,16 +244,10 @@ export const BankTestModal: React.FC = () => {
                     const pos = fund.activePosition;
                     const isPosBuy = pos?.type === 'BUY';
 
-                    // Unrealized PnL
-                    let unrlPnL = 0;
-                    if (pos && currentLivePrice > 0) {
-                      const movePct = isPosBuy
-                        ? (currentLivePrice - pos.entryPrice) / pos.entryPrice
-                        : (pos.entryPrice - currentLivePrice) / pos.entryPrice;
-                      unrlPnL = pos.amountUSDT * movePct;
-                    }
-
+                    // PnL Flotante directo de pos.pnlUSDT
+                    const unrlPnL = pos ? (pos.pnlUSDT ?? 0) : 0;
                     const isPnLPos = fund.stats.purePnL >= 0;
+                    const isMakerPnLPos = (fund.stats.makerNetPnL ?? fund.stats.purePnL) >= 0;
 
                     return (
                       <tr
@@ -349,17 +361,17 @@ export const BankTestModal: React.FC = () => {
                         </td>
 
                         {/* 7. Trades (W / L) */}
-                        <td className="py-3 px-3 text-right">
+                        <td className="py-3 px-2 text-right">
                           <span className="text-white">{fund.stats.totalTrades}</span>
                           <span className="text-[10px] text-[#787b86] ml-1">
                             ({fund.stats.wins}W / {fund.stats.losses}L)
                           </span>
                         </td>
 
-                        {/* 8. Pure PnL & Fee Breakdown */}
+                        {/* 8. Pure PnL (0% Fee) */}
                         <td className="py-3 px-3 text-right">
                           <span
-                            className={`font-bold block ${
+                            className={`font-bold ${
                               fund.stats.purePnL === 0
                                 ? 'text-[#787b86]'
                                 : isPnLPos
@@ -369,13 +381,33 @@ export const BankTestModal: React.FC = () => {
                           >
                             {fund.stats.purePnL > 0 ? '+' : ''}${fund.stats.purePnL.toFixed(2)}
                           </span>
-                          <span className="text-[9px] text-[#787b86] font-mono block">
-                            M: ${(fund.stats.makerNetPnL ?? fund.stats.purePnL).toFixed(2)} | T: ${(fund.stats.takerNetPnL ?? fund.stats.purePnL).toFixed(2)}
+                        </td>
+
+                        {/* 9. Maker PnL (0.01% Alo) */}
+                        <td className="py-3 px-3 text-right">
+                          <span
+                            className={`font-bold ${
+                              (fund.stats.makerNetPnL ?? fund.stats.purePnL) === 0
+                                ? 'text-[#787b86]'
+                                : isMakerPnLPos
+                                ? 'text-emerald-400'
+                                : 'text-[#f43f5e]'
+                            }`}
+                          >
+                            {(fund.stats.makerNetPnL ?? fund.stats.purePnL) > 0 ? '+' : ''}$
+                            {(fund.stats.makerNetPnL ?? fund.stats.purePnL).toFixed(2)}
                           </span>
                         </td>
 
-                        {/* 9. Current Capital */}
-                        <td className="py-3 px-4 text-right">
+                        {/* 10. Max Drawdown % */}
+                        <td className="py-3 px-2 text-right font-mono text-[11px] text-amber-400/90">
+                          {fund.stats.maxDrawdownPercent > 0
+                            ? `-${fund.stats.maxDrawdownPercent.toFixed(2)}%`
+                            : '0.00%'}
+                        </td>
+
+                        {/* 11. Current Capital */}
+                        <td className="py-3 px-3 text-right">
                           <span className="font-bold text-white text-xs">
                             ${fund.currentCapital.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>

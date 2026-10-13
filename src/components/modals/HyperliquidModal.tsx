@@ -311,7 +311,7 @@ export const HyperliquidModal: React.FC = () => {
           instantProfitTake: instantProfitEnabled,
           minInstantProfitUSD: parseFloat(minProfitInput) || 1.50,
           maxDrawdownPercent: 0.08,
-          longOnly: true,
+          longOnly: botConfig.tradeDirection === 'LONG_ONLY',
         }),
       });
       const data = await res.json();

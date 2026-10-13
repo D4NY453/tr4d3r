@@ -722,14 +722,7 @@ export const BotModal: React.FC = () => {
                         const pos = fund.activePosition;
                         const isPosBuy = pos?.type === 'BUY';
 
-                        let unrlPnL = 0;
-                        if (pos && currentLivePrice > 0) {
-                          const movePct = isPosBuy
-                            ? (currentLivePrice - pos.entryPrice) / pos.entryPrice
-                            : (pos.entryPrice - currentLivePrice) / pos.entryPrice;
-                          unrlPnL = pos.amountUSDT * movePct;
-                        }
-
+                        const unrlPnL = pos ? (pos.pnlUSDT ?? 0) : 0;
                         const isPnLPos = fund.stats.purePnL >= 0;
 
                         return (

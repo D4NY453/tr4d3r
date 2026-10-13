@@ -66,6 +66,7 @@ export const PriceChart: React.FC = () => {
   const priceLinesRef = useRef<any[]>([]);
   const isDisposedRef = useRef<boolean>(false);
   const syncRangeUnsubRef = useRef<(() => void) | null>(null);
+  const lastRealTickTimeRef = useRef<number>(0);
 
   const {
     currentSymbol,
@@ -310,10 +311,13 @@ export const PriceChart: React.FC = () => {
         );
         setSignals(detectedSignals);
 
-        // BOT AUTONOMOUS HOOK: evaluate newest live signal
+        // BOT AUTONOMOUS HOOK: evaluate active or current live signal
         const { isBotActive, evaluateAndRunBotSignal } = useTradingStore.getState();
         if (isBotActive && detectedSignals.length > 0) {
-          evaluateAndRunBotSignal(detectedSignals[0]);
+          const activeSignal = detectedSignals.find((s) => s.status === 'ACTIVE' || s.isCurrent);
+          if (activeSignal) {
+            evaluateAndRunBotSignal(activeSignal);
+          }
         }
 
         // 1. Exclude dismissed signals
@@ -705,6 +709,8 @@ export const PriceChart: React.FC = () => {
     const onLiveCandleReceived = (liveCandle: Candle) => {
       if (isDisposedRef.current) return;
 
+      lastRealTickTimeRef.current = Date.now();
+
       updateLastCandle(liveCandle);
 
       // Alimentar el Banco de Pruebas $100k y Motor de Micro-Velas en tiempo real (Rolling Window)
@@ -727,8 +733,11 @@ export const PriceChart: React.FC = () => {
     };
 
     // Heartbeat de 1s para asegurar que las micro-temporalidades (1s, 3s, 5s) nunca se congelen
+    // Solo ejecuta processMicroTick si han pasado >= 950ms desde el último tick real para no inyectar ticks planos duplicados
     const microHeartbeatInterval = setInterval(() => {
       if (isDisposedRef.current) return;
+      if (Date.now() - lastRealTickTimeRef.current < 950) return;
+
       const { candles, processMicroTick } = useTradingStore.getState();
       if (candles.length > 0) {
         const lastPrice = candles[candles.length - 1].close;

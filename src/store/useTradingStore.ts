@@ -476,6 +476,9 @@ export const useTradingStore = create<TradingState>()(
       setSymbol: (symbol) =>
         set((state) => {
           const upperSym = symbol.toUpperCase();
+          if (upperSym !== state.currentSymbol) {
+            globalTickRollingWindow.clear();
+          }
           return {
             currentSymbol: upperSym,
             selectedSignal:
@@ -1403,7 +1406,7 @@ export const useTradingStore = create<TradingState>()(
             state.hyperliquidAgentKey
           ) {
             const cleanCoin = signal.symbol.replace(/(-PERP|USDT|\/USD)$/i, '');
-            const sz = Number((state.botConfig.capitalPerTrade / currentLivePrice).toFixed(4));
+            const sz = Number(((state.botConfig.capitalPerTrade * state.hyperliquidDefaultLeverage) / currentLivePrice).toFixed(4));
             if (sz > 0) {
               executeHyperliquidOrder({
                 agentPrivateKey: state.hyperliquidAgentKey,

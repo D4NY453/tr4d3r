@@ -54,6 +54,22 @@ export function calculateEMA(candles: Candle[], period: number): IndicatorPoint[
 }
 
 /**
+ * Precisión Dinámica de Precios:
+ * 2 decimales si price >= 1000
+ * 4 decimales si price >= 1
+ * 6 decimales si price >= 0.001
+ * 8 decimales si price < 0.001 (para soportar kBONK, PEPE, SHIB y micro-scalping)
+ */
+export function roundPriceDynamic(price: number): number {
+  if (price === 0 || !isFinite(price)) return 0;
+  const abs = Math.abs(price);
+  if (abs >= 1000) return Number(price.toFixed(2));
+  if (abs >= 1) return Number(price.toFixed(4));
+  if (abs >= 0.001) return Number(price.toFixed(6));
+  return Number(price.toFixed(8));
+}
+
+/**
  * Relative Strength Index (RSI) using Wilder's Smoothing
  */
 export function calculateRSI(candles: Candle[], period: number = 14): IndicatorPoint[] {
@@ -72,8 +88,15 @@ export function calculateRSI(candles: Candle[], period: number = 14): IndicatorP
   let avgGain = gains / period;
   let avgLoss = losses / period;
 
-  const firstRS = avgLoss === 0 ? 100 : avgGain / avgLoss;
-  const firstRSI = 100 - 100 / (1 + firstRS);
+  let firstRSI: number;
+  if (avgGain === 0 && avgLoss === 0) {
+    firstRSI = 50; // Neutral en mercado plano
+  } else if (avgLoss === 0) {
+    firstRSI = 100;
+  } else {
+    const firstRS = avgGain / avgLoss;
+    firstRSI = 100 - 100 / (1 + firstRS);
+  }
   result.push({ time: candles[period].time, value: firstRSI });
 
   for (let i = period + 1; i < candles.length; i++) {
@@ -84,8 +107,15 @@ export function calculateRSI(candles: Candle[], period: number = 14): IndicatorP
     avgGain = (avgGain * (period - 1) + currentGain) / period;
     avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
 
-    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    const rsi = 100 - 100 / (1 + rs);
+    let rsi: number;
+    if (avgGain === 0 && avgLoss === 0) {
+      rsi = 50; // Neutral en mercado plano
+    } else if (avgLoss === 0) {
+      rsi = 100;
+    } else {
+      const rs = avgGain / avgLoss;
+      rsi = 100 - 100 / (1 + rs);
+    }
     result.push({ time: candles[i].time, value: rsi });
   }
 

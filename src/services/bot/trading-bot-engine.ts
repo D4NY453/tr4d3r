@@ -9,6 +9,9 @@ import {
   BankTestSummary,
   ClosedTrade,
 } from '@/types';
+import { roundPriceDynamic } from '../indicators/calculations';
+
+export { roundPriceDynamic };
 
 export interface BotDecisionResult {
   approved: boolean;
@@ -507,7 +510,8 @@ export function createInitialSubFunds(): SubFund[] {
 export function evaluateMicroStrategy(
   strategyName: string,
   candles: MicroCandle[],
-  currentPrice: number
+  currentPrice: number,
+  macroTrend1m: MacroTrend = 'NEUTRAL'
 ): { action: 'BUY' | 'SELL' | 'HOLD'; reason: string; stopLoss: number; takeProfit1: number; takeProfit2: number } {
   if (candles.length < 3 || currentPrice <= 0) {
     return { action: 'HOLD', reason: 'Acumulando micro-ticks', stopLoss: 0, takeProfit1: 0, takeProfit2: 0 };
@@ -537,17 +541,17 @@ export function evaluateMicroStrategy(
       return {
         action: 'BUY',
         reason: 'SuperTrend Micro Alcista (Precio > SMA rápida)',
-        stopLoss: Number((currentPrice - slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice + tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice + tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice - slDist),
+        takeProfit1: roundPriceDynamic(currentPrice + tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice + tp2Dist),
       };
     } else if (cLast < smaFast && smaFast <= smaSlow) {
       return {
         action: 'SELL',
         reason: 'SuperTrend Micro Bajista (Precio < SMA rápida)',
-        stopLoss: Number((currentPrice + slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice - tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice - tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice + slDist),
+        takeProfit1: roundPriceDynamic(currentPrice - tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice - tp2Dist),
       };
     }
   }
@@ -560,21 +564,23 @@ export function evaluateMicroStrategy(
     const upper = mean + std * 1.6;
     const lower = mean - std * 1.6;
 
-    if (currentPrice <= lower) {
+    // Exige confirmación de giro en la vela (cLast >= cPrev para BUY y cLast <= cPrev para SELL)
+    // y permite que entren siempre que la tendencia de 1m no esté fuertemente en contra
+    if (currentPrice <= lower && cLast >= cPrev && macroTrend1m !== 'BEARISH') {
       return {
         action: 'BUY',
-        reason: 'Rebote en Banda Inferior de Bollinger',
-        stopLoss: Number((currentPrice - slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice + tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice + tp2Dist).toFixed(4)),
+        reason: 'Rebote y Giro Alcista en Banda Inferior de Bollinger',
+        stopLoss: roundPriceDynamic(currentPrice - slDist),
+        takeProfit1: roundPriceDynamic(currentPrice + tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice + tp2Dist),
       };
-    } else if (currentPrice >= upper) {
+    } else if (currentPrice >= upper && cLast <= cPrev && macroTrend1m !== 'BULLISH') {
       return {
         action: 'SELL',
-        reason: 'Rechazo en Banda Superior de Bollinger',
-        stopLoss: Number((currentPrice + slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice - tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice - tp2Dist).toFixed(4)),
+        reason: 'Rechazo y Giro Bajista en Banda Superior de Bollinger',
+        stopLoss: roundPriceDynamic(currentPrice + slDist),
+        takeProfit1: roundPriceDynamic(currentPrice - tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice - tp2Dist),
       };
     }
   }
@@ -585,17 +591,17 @@ export function evaluateMicroStrategy(
       return {
         action: 'BUY',
         reason: 'Cruce Dorado Micro EMA (Fast cruzó arriba de Slow)',
-        stopLoss: Number((currentPrice - slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice + tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice + tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice - slDist),
+        takeProfit1: roundPriceDynamic(currentPrice + tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice + tp2Dist),
       };
     } else if (smaFast < smaSlow && cPrev >= smaSlow) {
       return {
         action: 'SELL',
         reason: 'Cruce Bajista Micro EMA (Fast cruzó abajo de Slow)',
-        stopLoss: Number((currentPrice + slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice - tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice - tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice + slDist),
+        takeProfit1: roundPriceDynamic(currentPrice - tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice - tp2Dist),
       };
     }
   }
@@ -607,17 +613,17 @@ export function evaluateMicroStrategy(
       return {
         action: 'BUY',
         reason: 'Impulso Alcista MACD Micro',
-        stopLoss: Number((currentPrice - slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice + tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice + tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice - slDist),
+        takeProfit1: roundPriceDynamic(currentPrice + tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice + tp2Dist),
       };
     } else if (momentum < 0 && cLast < cPrev) {
       return {
         action: 'SELL',
         reason: 'Impulso Bajista MACD Micro',
-        stopLoss: Number((currentPrice + slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice - tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice - tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice + slDist),
+        takeProfit1: roundPriceDynamic(currentPrice - tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice - tp2Dist),
       };
     }
   }
@@ -631,23 +637,30 @@ export function evaluateMicroStrategy(
       if (diff > 0) gains += diff;
       else losses += Math.abs(diff);
     }
-    const rsi = losses === 0 ? 100 : 100 - 100 / (1 + gains / losses);
+    // Corrección de RSI en mercado plano: si gains === 0 && losses === 0, RSI es 50
+    const rsi = gains === 0 && losses === 0
+      ? 50
+      : losses === 0
+      ? 100
+      : 100 - 100 / (1 + gains / losses);
 
-    if (rsi <= 35) {
+    // Exige confirmación de giro en la vela (cLast >= cPrev para BUY y cLast <= cPrev para SELL)
+    // y permite que entren siempre que la tendencia de 1m no esté fuertemente en contra
+    if (rsi <= 35 && cLast >= cPrev && macroTrend1m !== 'BEARISH') {
       return {
         action: 'BUY',
-        reason: `Sobreventa RSI Micro (${rsi.toFixed(0)})`,
-        stopLoss: Number((currentPrice - slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice + tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice + tp2Dist).toFixed(4)),
+        reason: `Sobreventa RSI Micro (${rsi.toFixed(0)}) con Giro Alcista`,
+        stopLoss: roundPriceDynamic(currentPrice - slDist),
+        takeProfit1: roundPriceDynamic(currentPrice + tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice + tp2Dist),
       };
-    } else if (rsi >= 65) {
+    } else if (rsi >= 65 && cLast <= cPrev && macroTrend1m !== 'BULLISH') {
       return {
         action: 'SELL',
-        reason: `Sobrecompra RSI Micro (${rsi.toFixed(0)})`,
-        stopLoss: Number((currentPrice + slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice - tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice - tp2Dist).toFixed(4)),
+        reason: `Sobrecompra RSI Micro (${rsi.toFixed(0)}) con Giro Bajista`,
+        stopLoss: roundPriceDynamic(currentPrice + slDist),
+        takeProfit1: roundPriceDynamic(currentPrice - tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice - tp2Dist),
       };
     }
   }
@@ -658,17 +671,17 @@ export function evaluateMicroStrategy(
       return {
         action: 'BUY',
         reason: 'Confluencia Alpha Micro Alcista',
-        stopLoss: Number((currentPrice - slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice + tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice + tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice - slDist),
+        takeProfit1: roundPriceDynamic(currentPrice + tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice + tp2Dist),
       };
     } else if (smaFast < smaSlow && cLast < cPrev) {
       return {
         action: 'SELL',
         reason: 'Confluencia Alpha Micro Bajista',
-        stopLoss: Number((currentPrice + slDist).toFixed(4)),
-        takeProfit1: Number((currentPrice - tp1Dist).toFixed(4)),
-        takeProfit2: Number((currentPrice - tp2Dist).toFixed(4)),
+        stopLoss: roundPriceDynamic(currentPrice + slDist),
+        takeProfit1: roundPriceDynamic(currentPrice - tp1Dist),
+        takeProfit2: roundPriceDynamic(currentPrice - tp2Dist),
       };
     }
   }
@@ -718,11 +731,17 @@ export function processTickForSubFunds(
     // 2. Construir micro-velas de ejecución
     const execSeconds = f.executionTimeframe === '1s' ? 1 : f.executionTimeframe === '3s' ? 3 : 5;
     const microCandles = rollingWindow.buildCandles(execSeconds, 30);
-    const strategyEval = evaluateMicroStrategy(f.strategy, microCandles, price);
+    const strategyEval = evaluateMicroStrategy(f.strategy, microCandles, price, trend1m);
 
     // 3. Si ya tiene posición activa: Monitorear TP, SL o Salida Contraria
     if (f.activePosition) {
       const pos = f.activePosition;
+
+      // Verifica para no mezclar precios si el usuario cambia de moneda
+      if (pos.symbol && pos.symbol !== symbol) {
+        return f;
+      }
+
       const isBuy = pos.type === 'BUY';
 
       // TP / SL
@@ -730,9 +749,11 @@ export function processTickForSubFunds(
       const isTPHit = isBuy ? price >= pos.takeProfit1 : price <= pos.takeProfit1;
 
       // Salida en micro-temporalidad ante señal contraria
+      // Exige un tiempo mínimo de retención de 3000ms (3 segundos) antes de cerrar por OPPOSITE_SIGNAL
+      const canCloseOpposite = timestamp - pos.entryTime >= 3000;
       const isOppositeSignal =
-        (isBuy && strategyEval.action === 'SELL') ||
-        (!isBuy && strategyEval.action === 'BUY');
+        canCloseOpposite &&
+        ((isBuy && strategyEval.action === 'SELL') || (!isBuy && strategyEval.action === 'BUY'));
 
       if (isSLHit || isTPHit || isOppositeSignal) {
         const exitPrice = price;
@@ -741,8 +762,8 @@ export function processTickForSubFunds(
           ? (exitPrice - pos.entryPrice) / pos.entryPrice
           : (pos.entryPrice - exitPrice) / pos.entryPrice;
 
-        // Medición pura: 0% Comisión (fee = 0)
-        const pnlUSDT = Number((pos.amountUSDT * rawMovePct).toFixed(2));
+        // Medición pura: 0% Comisión (fee = 0), cálculo con 4 decimales
+        const pnlUSDT = Number((pos.amountUSDT * rawMovePct).toFixed(4));
         const pnlPercent = Number((rawMovePct * 100).toFixed(2));
 
         f.currentCapital = Number((f.currentCapital + pnlUSDT).toFixed(2));
@@ -751,13 +772,21 @@ export function processTickForSubFunds(
 
         if (pnlUSDT > 0) {
           f.stats.wins += 1;
-        } else {
+        } else if (pnlUSDT < 0) {
           f.stats.losses += 1;
         }
 
         f.stats.winRate = Number(((f.stats.wins / f.stats.totalTrades) * 100).toFixed(1));
+
+        // Al cerrar un trade, calcula y actualiza f.stats.maxDrawdownPercent comparando f.currentCapital contra f.stats.peakCapital
         if (f.currentCapital > f.stats.peakCapital) {
           f.stats.peakCapital = f.currentCapital;
+        }
+        const currentDD = f.stats.peakCapital > 0
+          ? ((f.stats.peakCapital - f.currentCapital) / f.stats.peakCapital) * 100
+          : 0;
+        if (currentDD > f.stats.maxDrawdownPercent) {
+          f.stats.maxDrawdownPercent = Number(currentDD.toFixed(2));
         }
 
         const closedTrade: ClosedTrade = {
@@ -778,6 +807,15 @@ export function processTickForSubFunds(
         f.closedTrades.unshift(closedTrade);
         f.activePosition = null;
         tradesExecuted.push(closedTrade);
+      } else {
+        // Mientras f.activePosition siga abierta, actualiza en vivo f.activePosition.currentPrice, f.activePosition.pnlUSDT y f.activePosition.pnlPercent en cada tick
+        const currentRawMovePct = isBuy
+          ? (price - pos.entryPrice) / pos.entryPrice
+          : (pos.entryPrice - price) / pos.entryPrice;
+
+        pos.currentPrice = price;
+        pos.pnlUSDT = Number((pos.amountUSDT * currentRawMovePct).toFixed(4));
+        pos.pnlPercent = Number((currentRawMovePct * 100).toFixed(2));
       }
     }
     // 4. Si NO tiene posición activa: Evaluar Entrada Bidireccional con Confirmación MTF

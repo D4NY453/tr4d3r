@@ -1,0 +1,45 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js Build Outputs
+/.next/
+/out/
+build/
+dist/
+
+# SQLite databases & temp files
+trade-journal.db
+trade-journal.db-shm
+trade-journal.db-wal
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment Variables & Keys
+.env
+.env*.local
+.env.production
+.env.development
+
+# Logs & Runtime
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+pm2.log
+*.log
+
+# Scratch & Temporary archives
+trading.tar.gz
+scratch/
+.system_generated/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.tsbuildinfo
+next-env.d.ts

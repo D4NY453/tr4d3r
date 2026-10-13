@@ -1,0 +1,1497 @@
+[
+  {
+    "start": 0.38,
+    "duration": 3.899,
+    "text": "hola buenas tardes hoy vamos a hablar de"
+  },
+  {
+    "start": 2.63,
+    "duration": 4.68,
+    "text": "un indicador que a mí me gusta mucho que"
+  },
+  {
+    "start": 4.279,
+    "duration": 5.341,
+    "text": "es las bandas de bollinger ya veréis que"
+  },
+  {
+    "start": 7.31,
+    "duration": 3.72,
+    "text": "se trata de un indicador que da mucho"
+  },
+  {
+    "start": 9.62,
+    "duration": 3.87,
+    "text": "juego a la hora de operar se puede"
+  },
+  {
+    "start": 11.03,
+    "duration": 4.529,
+    "text": "utilizar para hacer trading en en rangos"
+  },
+  {
+    "start": 13.49,
+    "duration": 4.98,
+    "text": "se puede utilizar también para para"
+  },
+  {
+    "start": 15.559,
+    "duration": 4.86,
+    "text": "operar en tendencias y las reglas varían"
+  },
+  {
+    "start": 18.47,
+    "duration": 5.189,
+    "text": "bastante entre el uso que le queramos"
+  },
+  {
+    "start": 20.419,
+    "duration": 6.03,
+    "text": "dar como es complejo la manera en que"
+  },
+  {
+    "start": 23.659,
+    "duration": 4.92,
+    "text": "podemos usarlo vamos a dividir todo lo"
+  },
+  {
+    "start": 26.449,
+    "duration": 5.28,
+    "text": "que es el capítulo basado en bandas de"
+  },
+  {
+    "start": 28.579,
+    "duration": 5.821,
+    "text": "bollinger en distintos epígrafes y a su"
+  },
+  {
+    "start": 31.729,
+    "duration": 4.771,
+    "text": "vez en varias sesiones la de hoy el"
+  },
+  {
+    "start": 34.4,
+    "duration": 4.77,
+    "text": "capítulo de hoy es cómo operar en rangos"
+  },
+  {
+    "start": 36.5,
+    "duration": 5.7,
+    "text": "voy a dividir a su vez esta elección en"
+  },
+  {
+    "start": 39.17,
+    "duration": 6.93,
+    "text": "tres vídeos cortos y en cada uno de"
+  },
+  {
+    "start": 42.2,
+    "duration": 5.67,
+    "text": "ellos voy a cometer un enfoque de reglas"
+  },
+  {
+    "start": 46.1,
+    "duration": 3.51,
+    "text": "básicas y vamos a ir introduciendo"
+  },
+  {
+    "start": 47.87,
+    "duration": 4.86,
+    "text": "ciertos filtros ciertas mejoras que"
+  },
+  {
+    "start": 49.61,
+    "duration": 4.79,
+    "text": "veamos cómo van a hacer que mi operativa"
+  },
+  {
+    "start": 52.73,
+    "duration": 3.86,
+    "text": "ganen efectividad"
+  },
+  {
+    "start": 54.4,
+    "duration": 4.2,
+    "text": "en primer lugar vamos a describir un"
+  },
+  {
+    "start": 56.59,
+    "duration": 4.5,
+    "text": "poco en qué consisten las bandas de"
+  },
+  {
+    "start": 58.6,
+    "duration": 4.92,
+    "text": "bollinger es un indicador que aparece en"
+  },
+  {
+    "start": 61.09,
+    "duration": 4.62,
+    "text": "la década de los 80 su creador es john"
+  },
+  {
+    "start": 63.52,
+    "duration": 4.02,
+    "text": "bellinger de ahí su nombre y es un"
+  },
+  {
+    "start": 65.71,
+    "duration": 3.51,
+    "text": "indicador que lo que trae es una mejora"
+  },
+  {
+    "start": 67.54,
+    "duration": 3.96,
+    "text": "clara respecto a lo que se utilizaba"
+  },
+  {
+    "start": 69.22,
+    "duration": 4.71,
+    "text": "hasta aquella época que era"
+  },
+  {
+    "start": 71.5,
+    "duration": 4.02,
+    "text": "las bandas sobre medias móviles la"
+  },
+  {
+    "start": 73.93,
+    "duration": 3.3,
+    "text": "principal diferencia que hay entre las"
+  },
+  {
+    "start": 75.52,
+    "duration": 4.41,
+    "text": "bandas de bollinger y las bandas sobre"
+  },
+  {
+    "start": 77.23,
+    "duration": 4.89,
+    "text": "las medias móviles es que la distancia a"
+  },
+  {
+    "start": 79.93,
+    "duration": 4.53,
+    "text": "la cual fluctúan la banda de abajo y la"
+  },
+  {
+    "start": 82.12,
+    "duration": 4.53,
+    "text": "banda superior respecto a la media no es"
+  },
+  {
+    "start": 84.46,
+    "duration": 3.99,
+    "text": "estática sino que se va ampliando y se"
+  },
+  {
+    "start": 86.65,
+    "duration": 4.14,
+    "text": "va reduciendo hay veces que la distancia"
+  },
+  {
+    "start": 88.45,
+    "duration": 4.58,
+    "text": "es muy grande y otras veces y que la"
+  },
+  {
+    "start": 90.79,
+    "duration": 3.98,
+    "text": "distancia es pequeña"
+  },
+  {
+    "start": 93.03,
+    "duration": 3.42,
+    "text": "y esto es importante porque ya veremos"
+  },
+  {
+    "start": 94.77,
+    "duration": 2.88,
+    "text": "luego que una de las utilidades que se"
+  },
+  {
+    "start": 96.45,
+    "duration": 3.66,
+    "text": "le puede dar a este tipo de indicadores"
+  },
+  {
+    "start": 97.65,
+    "duration": 3.75,
+    "text": "es graficar la diferencia que existe"
+  },
+  {
+    "start": 100.11,
+    "duration": 2.85,
+    "text": "entre la banda inferior y la banda"
+  },
+  {
+    "start": 101.4,
+    "duration": 4.43,
+    "text": "superior y la cantidad de información"
+  },
+  {
+    "start": 102.96,
+    "duration": 6.87,
+    "text": "que eso me ofrece a la hora de tomar"
+  },
+  {
+    "start": 105.83,
+    "duration": 6.16,
+    "text": "posicionamientos vamos a explicar en qué"
+  },
+  {
+    "start": 109.83,
+    "duration": 4.62,
+    "text": "consiste la fórmula que hay debajo de"
+  },
+  {
+    "start": 111.99,
+    "duration": 4.29,
+    "text": "las bandas de bollinger como veis es un"
+  },
+  {
+    "start": 114.45,
+    "duration": 4.29,
+    "text": "indicador que está compuesto de tres"
+  },
+  {
+    "start": 116.28,
+    "duration": 4.379,
+    "text": "líneas una línea central de color rojo"
+  },
+  {
+    "start": 118.74,
+    "duration": 3.0,
+    "text": "que es una media móvil simple de 20"
+  },
+  {
+    "start": 120.659,
+    "duration": 3.031,
+    "text": "períodos"
+  },
+  {
+    "start": 121.74,
+    "duration": 4.17,
+    "text": "lógicamente el parámetro de 20 periodos"
+  },
+  {
+    "start": 123.69,
+    "duration": 3.72,
+    "text": "se puede modificar lo mismo ocurre con"
+  },
+  {
+    "start": 125.91,
+    "duration": 3.47,
+    "text": "la media móvil simple se puede utilizar"
+  },
+  {
+    "start": 127.41,
+    "duration": 4.14,
+    "text": "una media ponderada exponencial"
+  },
+  {
+    "start": 129.38,
+    "duration": 3.85,
+    "text": "adaptativa etcétera pero para"
+  },
+  {
+    "start": 131.55,
+    "duration": 4.02,
+    "text": "simplificarlo y ceñirnos a location"
+  },
+  {
+    "start": 133.23,
+    "duration": 4.5,
+    "text": "bollinger creo inicialmente vamos a"
+  },
+  {
+    "start": 135.57,
+    "duration": 4.41,
+    "text": "utilizar el indicador tal y como lo"
+  },
+  {
+    "start": 137.73,
+    "duration": 4.41,
+    "text": "concibió el que era una media móvil de"
+  },
+  {
+    "start": 139.98,
+    "duration": 4.32,
+    "text": "20 periodos al ser una media móvil"
+  },
+  {
+    "start": 142.14,
+    "duration": 4.29,
+    "text": "simple quiere decir que el cálculo para"
+  },
+  {
+    "start": 144.3,
+    "duration": 4.8,
+    "text": "el día de hoy consiste en agregar los"
+  },
+  {
+    "start": 146.43,
+    "duration": 4.529,
+    "text": "cierres de las últimas 20 sesiones y"
+  },
+  {
+    "start": 149.1,
+    "duration": 3.42,
+    "text": "dividirlo entre 20 y eso me daría el"
+  },
+  {
+    "start": 150.959,
+    "duration": 3.131,
+    "text": "valor de la media móvil para"
+  },
+  {
+    "start": 152.52,
+    "duration": 3.37,
+    "text": "a este punto"
+  },
+  {
+    "start": 154.09,
+    "duration": 4.83,
+    "text": "y luego lo que calculamos son dos"
+  },
+  {
+    "start": 155.89,
+    "duration": 5.61,
+    "text": "desviaciones estándar una va por arriba"
+  },
+  {
+    "start": 158.92,
+    "duration": 5.91,
+    "text": "y la otra va por debajo"
+  },
+  {
+    "start": 161.5,
+    "duration": 4.92,
+    "text": "qué concepto subyace debajo del cálculo"
+  },
+  {
+    "start": 164.83,
+    "duration": 4.2,
+    "text": "de dos desviaciones estándar bueno"
+  },
+  {
+    "start": 166.42,
+    "duration": 4.11,
+    "text": "normalmente cuando calculamos dos"
+  },
+  {
+    "start": 169.03,
+    "duration": 3.32,
+    "text": "desviaciones estándar sobre la variación"
+  },
+  {
+    "start": 170.53,
+    "duration": 5.25,
+    "text": "de precio lo que quiere decir es que el"
+  },
+  {
+    "start": 172.35,
+    "duration": 6.34,
+    "text": "95% de los movimientos de los precios se"
+  },
+  {
+    "start": 175.78,
+    "duration": 4.53,
+    "text": "van a encontrar dentro de las bandas que"
+  },
+  {
+    "start": 178.69,
+    "duration": 3.99,
+    "text": "ocurren en nuestro caso no estamos"
+  },
+  {
+    "start": 180.31,
+    "duration": 4.59,
+    "text": "calculando 12 desviaciones estándar"
+  },
+  {
+    "start": 182.68,
+    "duration": 4.86,
+    "text": "sobre el precio sino sobre la media"
+  },
+  {
+    "start": 184.9,
+    "duration": 3.93,
+    "text": "móvil simple qué características tienen"
+  },
+  {
+    "start": 187.54,
+    "duration": 3.21,
+    "text": "las medias móviles pues que son"
+  },
+  {
+    "start": 188.83,
+    "duration": 3.99,
+    "text": "indicadores retardados qué quiere decir"
+  },
+  {
+    "start": 190.75,
+    "duration": 4.98,
+    "text": "eso que cuando el mercado entra en"
+  },
+  {
+    "start": 192.82,
+    "duration": 5.7,
+    "text": "tendencia alcista la media móvil siempre"
+  },
+  {
+    "start": 195.73,
+    "duration": 5.19,
+    "text": "se comporta con retardo y por tanto va"
+  },
+  {
+    "start": 198.52,
+    "duration": 3.96,
+    "text": "por debajo del precio de la misma manera"
+  },
+  {
+    "start": 200.92,
+    "duration": 4.41,
+    "text": "cuando el mercado entra en tendencia"
+  },
+  {
+    "start": 202.48,
+    "duration": 5.55,
+    "text": "bajista como veis aquí la media móvil se"
+  },
+  {
+    "start": 205.33,
+    "duration": 5.3,
+    "text": "desplaza por encima del precio al ser un"
+  },
+  {
+    "start": 208.03,
+    "duration": 4.8,
+    "text": "indicador nuestras"
+  },
+  {
+    "start": 210.63,
+    "duration": 4.48,
+    "text": "desviaciones estándar tanto superior"
+  },
+  {
+    "start": 212.83,
+    "duration": 4.56,
+    "text": "como inferior que están calculadas sobre"
+  },
+  {
+    "start": 215.11,
+    "duration": 3.94,
+    "text": "este indicador suavizado también van a"
+  },
+  {
+    "start": 217.39,
+    "duration": 4.87,
+    "text": "actuar con ciento"
+  },
+  {
+    "start": 219.05,
+    "duration": 5.55,
+    "text": "y eso lo que nos va a llevar es a que no"
+  },
+  {
+    "start": 222.26,
+    "duration": 5.04,
+    "text": "tengamos solamente 5 de cada 100 casos"
+  },
+  {
+    "start": 224.6,
+    "duration": 4.2,
+    "text": "de precios fuera de las bandas sino que"
+  },
+  {
+    "start": 227.3,
+    "duration": 4.2,
+    "text": "la casuística va a ser un poco más"
+  },
+  {
+    "start": 228.8,
+    "duration": 6.0,
+    "text": "elevada y porque es importante entender"
+  },
+  {
+    "start": 231.5,
+    "duration": 6.35,
+    "text": "esto básicamente porque tal y como se"
+  },
+  {
+    "start": 234.8,
+    "duration": 5.74,
+    "text": "concibió el indicador en su origen"
+  },
+  {
+    "start": 237.85,
+    "duration": 5.49,
+    "text": "idea era operar cuando el precio"
+  },
+  {
+    "start": 240.54,
+    "duration": 5.35,
+    "text": "perforaba la banda inferior como señal"
+  },
+  {
+    "start": 243.34,
+    "duration": 5.3,
+    "text": "de compra y vender cuando el precio"
+  },
+  {
+    "start": 245.89,
+    "duration": 5.39,
+    "text": "superaba la parte superior"
+  },
+  {
+    "start": 248.64,
+    "duration": 5.64,
+    "text": "la banda superior"
+  },
+  {
+    "start": 251.28,
+    "duration": 4.95,
+    "text": "nosotros vamos a ver que hay una serie"
+  },
+  {
+    "start": 254.28,
+    "duration": 3.69,
+    "text": "de evoluciones desde que se crea"
+  },
+  {
+    "start": 256.23,
+    "duration": 4.5,
+    "text": "inicialmente el indicador de john"
+  },
+  {
+    "start": 257.97,
+    "duration": 5.91,
+    "text": "bellinger iii y muchos analistas han"
+  },
+  {
+    "start": 260.73,
+    "duration": 4.62,
+    "text": "generado ideas o filtros o"
+  },
+  {
+    "start": 263.88,
+    "duration": 4.259,
+    "text": "modificaciones a las reglas originales"
+  },
+  {
+    "start": 265.35,
+    "duration": 6.44,
+    "text": "que generan un cambio sustancial en"
+  },
+  {
+    "start": 268.139,
+    "duration": 3.651,
+    "text": "cuanto a la efectividad del"
+  },
+  {
+    "start": 272.139,
+    "duration": 4.801,
+    "text": "yo voy a empezar con las reglas más"
+  },
+  {
+    "start": 273.969,
+    "duration": 4.981,
+    "text": "básicas para que veamos de alguna manera"
+  },
+  {
+    "start": 276.94,
+    "duration": 4.83,
+    "text": "aquí podemos atenernos si operamos en"
+  },
+  {
+    "start": 278.95,
+    "duration": 4.65,
+    "text": "bases de indicador en primer lugar y"
+  },
+  {
+    "start": 281.77,
+    "duration": 4.56,
+    "text": "antes de empezar con la operativa en sí"
+  },
+  {
+    "start": 283.6,
+    "duration": 5.01,
+    "text": "lo que vamos a hacer es hablar del"
+  },
+  {
+    "start": 286.33,
+    "duration": 4.68,
+    "text": "mercado que vamos a utilizar se trata de"
+  },
+  {
+    "start": 288.61,
+    "duration": 4.41,
+    "text": "un índice general de renta variable es"
+  },
+  {
+    "start": 291.01,
+    "duration": 5.01,
+    "text": "el ibex-35 corresponde al índice en"
+  },
+  {
+    "start": 293.02,
+    "duration": 6.24,
+    "text": "españa y el gráfico que tenéis debajo es"
+  },
+  {
+    "start": 296.02,
+    "duration": 6.63,
+    "text": "un gráfico de velas"
+  },
+  {
+    "start": 299.26,
+    "duration": 6.18,
+    "text": "en base diaria eso quiere decir que cada"
+  },
+  {
+    "start": 302.65,
+    "duration": 6.54,
+    "text": "vela representa la sesión de un día"
+  },
+  {
+    "start": 305.44,
+    "duration": 5.55,
+    "text": "completo nosotros vamos a utilizar una"
+  },
+  {
+    "start": 309.19,
+    "duration": 3.77,
+    "text": "serie de reglas que yo voy a plasmar"
+  },
+  {
+    "start": 310.99,
+    "duration": 5.01,
+    "text": "aquí abajo y a partir de ese momento"
+  },
+  {
+    "start": 312.96,
+    "duration": 5.11,
+    "text": "vamos a ir marcando en el gráfico donde"
+  },
+  {
+    "start": 316.0,
+    "duration": 3.44,
+    "text": "se producen todas las señales de compra"
+  },
+  {
+    "start": 318.07,
+    "duration": 3.27,
+    "text": "y todas las señales de venta para"
+  },
+  {
+    "start": 319.44,
+    "duration": 4.14,
+    "text": "posteriormente poder analizar los"
+  },
+  {
+    "start": 321.34,
+    "duration": 2.24,
+    "text": "resultados"
+  },
+  {
+    "start": 323.94,
+    "duration": 4.68,
+    "text": "bueno aquí dice escritas ya las órdenes"
+  },
+  {
+    "start": 325.65,
+    "duration": 5.57,
+    "text": "lo que vamos a hacer es utilizar unas"
+  },
+  {
+    "start": 328.62,
+    "duration": 5.27,
+    "text": "reglas operativas que son muy básicas"
+  },
+  {
+    "start": 331.22,
+    "duration": 4.96,
+    "text": "mediante las cuales cuando el precio"
+  },
+  {
+    "start": 333.89,
+    "duration": 4.36,
+    "text": "caiga por debajo de la banda inferior"
+  },
+  {
+    "start": 336.18,
+    "duration": 4.77,
+    "text": "vamos a comprar y cuando el precio"
+  },
+  {
+    "start": 338.25,
+    "duration": 5.76,
+    "text": "supere la banda la banda de arriba la"
+  },
+  {
+    "start": 340.95,
+    "duration": 4.74,
+    "text": "banda superior vamos a vender estas son"
+  },
+  {
+    "start": 344.01,
+    "duration": 4.53,
+    "text": "mis reglas básicas y lo que voy a hacer"
+  },
+  {
+    "start": 345.69,
+    "duration": 5.879,
+    "text": "ahora es marcar las de manera que veamos"
+  },
+  {
+    "start": 348.54,
+    "duration": 4.98,
+    "text": "qué operativa generan"
+  },
+  {
+    "start": 351.569,
+    "duration": 4.74,
+    "text": "si miramos al comienzo del gráfico vemos"
+  },
+  {
+    "start": 353.52,
+    "duration": 6.799,
+    "text": "que la primera barra la primera vela que"
+  },
+  {
+    "start": 356.309,
+    "duration": 4.01,
+    "text": "perfora la parte superior"
+  },
+  {
+    "start": 361.91,
+    "duration": 6.159,
+    "text": "acciones estándar"
+  },
+  {
+    "start": 365.409,
+    "duration": 2.66,
+    "text": "20 días"
+  },
+  {
+    "start": 368.669,
+    "duration": 4.141,
+    "text": "casi al comienzo del gráfico"
+  },
+  {
+    "start": 373.55,
+    "duration": 3.93,
+    "text": "esta es la primera operación que realizó"
+  },
+  {
+    "start": 375.47,
+    "duration": 3.63,
+    "text": "esta es la primera venta"
+  },
+  {
+    "start": 377.48,
+    "duration": 4.35,
+    "text": "a partir de este momento lo que me"
+  },
+  {
+    "start": 379.1,
+    "duration": 5.19,
+    "text": "importa es cuando el precio vuelve a"
+  },
+  {
+    "start": 381.83,
+    "duration": 3.11,
+    "text": "retroceder hasta la banda inferior y la"
+  },
+  {
+    "start": 384.29,
+    "duration": 3.05,
+    "text": "rompe"
+  },
+  {
+    "start": 384.94,
+    "duration": 6.949,
+    "text": "qué ocurre en este momento"
+  },
+  {
+    "start": 387.34,
+    "duration": 4.549,
+    "text": "esto genera una señal de compra"
+  },
+  {
+    "start": 393.0,
+    "duration": 3.81,
+    "text": "a partir de aquí hay una reacción al"
+  },
+  {
+    "start": 394.77,
+    "duration": 3.54,
+    "text": "alza pero el movimiento no es"
+  },
+  {
+    "start": 396.81,
+    "duration": 4.41,
+    "text": "suficientemente fuerte como para"
+  },
+  {
+    "start": 398.31,
+    "duration": 6.36,
+    "text": "perforar la banda superior y el"
+  },
+  {
+    "start": 401.22,
+    "duration": 5.94,
+    "text": "retroceso me devuelve otra vez al punto"
+  },
+  {
+    "start": 404.67,
+    "duration": 3.75,
+    "text": "de inicio no tengo que comprar nada"
+  },
+  {
+    "start": 407.16,
+    "duration": 3.18,
+    "text": "puesto que ya mantengo una posición"
+  },
+  {
+    "start": 408.42,
+    "duration": 3.65,
+    "text": "comprada que se ha originado al comienzo"
+  },
+  {
+    "start": 410.34,
+    "duration": 3.65,
+    "text": "de octubre"
+  },
+  {
+    "start": 412.07,
+    "duration": 4.02,
+    "text": "reacciona a partir de ahí y en esta"
+  },
+  {
+    "start": 413.99,
+    "duration": 5.25,
+    "text": "ocasión los altos de esta vela si"
+  },
+  {
+    "start": 416.09,
+    "duration": 7.13,
+    "text": "perforan la banda superior y por tanto"
+  },
+  {
+    "start": 419.24,
+    "duration": 3.98,
+    "text": "generan una señal de venta"
+  },
+  {
+    "start": 426.31,
+    "duration": 7.02,
+    "text": "el movimiento que viene a continuación a"
+  },
+  {
+    "start": 429.85,
+    "duration": 5.43,
+    "text": "la baja no llega a alcanzar la banda"
+  },
+  {
+    "start": 433.33,
+    "duration": 5.67,
+    "text": "inferior y se produce una reacción"
+  },
+  {
+    "start": 435.28,
+    "duration": 5.1,
+    "text": "fuerte al alza que comienza a avanzar"
+  },
+  {
+    "start": 439.0,
+    "duration": 3.65,
+    "text": "con mucho momentum"
+  },
+  {
+    "start": 440.38,
+    "duration": 5.24,
+    "text": "cogiendo bastante direccionalidad"
+  },
+  {
+    "start": 442.65,
+    "duration": 4.89,
+    "text": "este movimiento que se genera aquí se"
+  },
+  {
+    "start": 445.62,
+    "duration": 4.26,
+    "text": "está produciendo unas pérdidas bastante"
+  },
+  {
+    "start": 447.54,
+    "duration": 4.26,
+    "text": "fuertes y esto es un duro down down es"
+  },
+  {
+    "start": 449.88,
+    "duration": 3.99,
+    "text": "la pérdida potencial que tengo que"
+  },
+  {
+    "start": 451.8,
+    "duration": 4.83,
+    "text": "soportar con mi sistema hasta que cierro"
+  },
+  {
+    "start": 453.87,
+    "duration": 4.139,
+    "text": "la operación el mercado no revierta"
+  },
+  {
+    "start": 456.63,
+    "duration": 3.27,
+    "text": "hasta este punto aquí empieza un"
+  },
+  {
+    "start": 458.009,
+    "duration": 3.961,
+    "text": "movimiento de vuelta fuerte pero hoy se"
+  },
+  {
+    "start": 459.9,
+    "duration": 4.01,
+    "text": "encuentra con la banda inferior muy"
+  },
+  {
+    "start": 461.97,
+    "duration": 5.61,
+    "text": "rápido lo cual quiere decir que"
+  },
+  {
+    "start": 463.91,
+    "duration": 5.65,
+    "text": "generamos la señal de compra aquí cuando"
+  },
+  {
+    "start": 467.58,
+    "duration": 6.0,
+    "text": "el precio cierra el plan cuando el"
+  },
+  {
+    "start": 469.56,
+    "duration": 6.27,
+    "text": "precio perfora la banda inferior"
+  },
+  {
+    "start": 473.58,
+    "duration": 5.369,
+    "text": "de nuevo continúa la inercia a la baja"
+  },
+  {
+    "start": 475.83,
+    "duration": 4.559,
+    "text": "durante tres sesiones más y aquí"
+  },
+  {
+    "start": 478.949,
+    "duration": 3.72,
+    "text": "empezamos un proceso de estabilización"
+  },
+  {
+    "start": 480.389,
+    "duration": 5.771,
+    "text": "hasta que finalmente el mercado vuelve a"
+  },
+  {
+    "start": 482.669,
+    "duration": 7.111,
+    "text": "tirar hacia arriba y perfora la banda"
+  },
+  {
+    "start": 486.16,
+    "duration": 3.62,
+    "text": "esta es mi señal de venta siguiente"
+  },
+  {
+    "start": 491.87,
+    "duration": 4.08,
+    "text": "veis que hay una cierta inercia después"
+  },
+  {
+    "start": 494.45,
+    "duration": 4.23,
+    "text": "de esta ruptura"
+  },
+  {
+    "start": 495.95,
+    "duration": 4.31,
+    "text": "posteriormente una nueva rotación aquí"
+  },
+  {
+    "start": 498.68,
+    "duration": 4.19,
+    "text": "se produce"
+  },
+  {
+    "start": 500.26,
+    "duration": 4.32,
+    "text": "la condición de ruptura de la banda"
+  },
+  {
+    "start": 502.87,
+    "duration": 5.509,
+    "text": "inferior por tanto"
+  },
+  {
+    "start": 504.58,
+    "duration": 3.799,
+    "text": "nuevamente generamos una compra"
+  },
+  {
+    "start": 508.5,
+    "duration": 4.77,
+    "text": "mercado que continúa a la baja rebota se"
+  },
+  {
+    "start": 511.17,
+    "duration": 4.73,
+    "text": "estabiliza y finalmente recupera y"
+  },
+  {
+    "start": 513.27,
+    "duration": 5.62,
+    "text": "vuelve a perforar la banda superior"
+  },
+  {
+    "start": 515.9,
+    "duration": 2.99,
+    "text": "señal de venta"
+  },
+  {
+    "start": 525.48,
+    "duration": 4.409,
+    "text": "el mercado extiende el movimiento al"
+  },
+  {
+    "start": 527.01,
+    "duration": 6.82,
+    "text": "alza y nuevamente rota para abajo hasta"
+  },
+  {
+    "start": 529.889,
+    "duration": 6.811,
+    "text": "que perfora la línea inferior"
+  },
+  {
+    "start": 533.83,
+    "duration": 2.87,
+    "text": "una nueva"
+  },
+  {
+    "start": 537.459,
+    "duration": 4.86,
+    "text": "de esta manera puedo seguir buscando los"
+  },
+  {
+    "start": 540.309,
+    "duration": 4.411,
+    "text": "puntos de compraventa fijaos que esta"
+  },
+  {
+    "start": 542.319,
+    "duration": 3.841,
+    "text": "recuperación no llega a sacarnos fuera"
+  },
+  {
+    "start": 544.72,
+    "duration": 3.409,
+    "text": "del mercado"
+  },
+  {
+    "start": 546.16,
+    "duration": 4.2,
+    "text": "el movimiento del precio vuelve a"
+  },
+  {
+    "start": 548.129,
+    "duration": 4.661,
+    "text": "direccionalidad hacia abajo y nuevamente"
+  },
+  {
+    "start": 550.36,
+    "duration": 4.61,
+    "text": "me enfrento a una posición con unas"
+  },
+  {
+    "start": 552.79,
+    "duration": 5.159,
+    "text": "pérdidas potenciales bastante elevadas"
+  },
+  {
+    "start": 554.97,
+    "duration": 4.78,
+    "text": "finalmente hay una recuperación en dos o"
+  },
+  {
+    "start": 557.949,
+    "duration": 3.841,
+    "text": "tres tramos hasta que el mercado"
+  },
+  {
+    "start": 559.75,
+    "duration": 6.17,
+    "text": "consigue subir lo suficiente para"
+  },
+  {
+    "start": 561.79,
+    "duration": 4.13,
+    "text": "perforar la banda superior"
+  },
+  {
+    "start": 565.97,
+    "duration": 4.219,
+    "text": "ahí tengo mi señal de venta"
+  },
+  {
+    "start": 571.64,
+    "duration": 5.27,
+    "text": "el mercado no se estabiliza sino que ahí"
+  },
+  {
+    "start": 574.22,
+    "duration": 6.9,
+    "text": "arranca con mucha fuerza sube otra vez"
+  },
+  {
+    "start": 576.91,
+    "duration": 6.94,
+    "text": "hasta niveles máximos y la retrocesión o"
+  },
+  {
+    "start": 581.12,
+    "duration": 6.48,
+    "text": "reversión del movimiento se produce en"
+  },
+  {
+    "start": 583.85,
+    "duration": 6.32,
+    "text": "este punto aquí hay un y se produce un"
+  },
+  {
+    "start": 587.6,
+    "duration": 2.57,
+    "text": "corte"
+  },
+  {
+    "start": 591.059,
+    "duration": 4.41,
+    "text": "de la banda inferior y por tanto una"
+  },
+  {
+    "start": 593.009,
+    "duration": 4.17,
+    "text": "orden de compra esta posición sería la"
+  },
+  {
+    "start": 595.469,
+    "duration": 3.84,
+    "text": "que tendríamos abierta en este momento"
+  },
+  {
+    "start": 597.179,
+    "duration": 4.53,
+    "text": "en espera de ver si el ibex es capaz de"
+  },
+  {
+    "start": 599.309,
+    "duration": 5.4,
+    "text": "alcanzar la zona de 8.900 y por tanto"
+  },
+  {
+    "start": 601.709,
+    "duration": 4.671,
+    "text": "generar una nueva señal de venta está"
+  },
+  {
+    "start": 604.709,
+    "duration": 5.091,
+    "text": "operativa"
+  },
+  {
+    "start": 606.38,
+    "duration": 7.38,
+    "text": "que veis delante tiene cierto sentido"
+  },
+  {
+    "start": 609.8,
+    "duration": 6.51,
+    "text": "cuando se produce un movimiento en"
+  },
+  {
+    "start": 613.76,
+    "duration": 5.31,
+    "text": "rangos es decir cuando el mercado"
+  },
+  {
+    "start": 616.31,
+    "duration": 5.55,
+    "text": "carece de direccionalidad las señales de"
+  },
+  {
+    "start": 619.07,
+    "duration": 4.41,
+    "text": "venta compraventa o incluso aquí dentro"
+  },
+  {
+    "start": 621.86,
+    "duration": 5.25,
+    "text": "que hay bastante volatilidad pero poca"
+  },
+  {
+    "start": 623.48,
+    "duration": 5.4,
+    "text": "dirección veis que la compra y la venta"
+  },
+  {
+    "start": 627.11,
+    "duration": 3.66,
+    "text": "se produce en casi un mismo nivel esta"
+  },
+  {
+    "start": 628.88,
+    "duration": 4.02,
+    "text": "venta es buena"
+  },
+  {
+    "start": 630.77,
+    "duration": 5.3,
+    "text": "compramos mucho más abajo esta compra"
+  },
+  {
+    "start": 632.9,
+    "duration": 5.81,
+    "text": "también es buena porque vendemos"
+  },
+  {
+    "start": 636.07,
+    "duration": 4.95,
+    "text": "y más arriba está prácticamente saldría"
+  },
+  {
+    "start": 638.71,
+    "duration": 4.14,
+    "text": "a break even es decir con un resultado"
+  },
+  {
+    "start": 641.02,
+    "duration": 3.96,
+    "text": "en torno a 0"
+  },
+  {
+    "start": 642.85,
+    "duration": 4.59,
+    "text": "pero qué ocurre cuando el mercado coge"
+  },
+  {
+    "start": 644.98,
+    "duration": 4.409,
+    "text": "dirección tanto en este momento como en"
+  },
+  {
+    "start": 647.44,
+    "duration": 5.069,
+    "text": "este de aquí o incluso en este proceso"
+  },
+  {
+    "start": 649.389,
+    "duration": 4.831,
+    "text": "de aquí lo que ocurre es que es muy"
+  },
+  {
+    "start": 652.509,
+    "duration": 3.601,
+    "text": "complicado por no decir imposible que"
+  },
+  {
+    "start": 654.22,
+    "duration": 3.619,
+    "text": "bandas de bollinger usadas de esta"
+  },
+  {
+    "start": 656.11,
+    "duration": 5.279,
+    "text": "manera puedan generar un resultado"
+  },
+  {
+    "start": 657.839,
+    "duration": 6.451,
+    "text": "positivo si el mercado coge tendencia"
+  },
+  {
+    "start": 661.389,
+    "duration": 5.091,
+    "text": "lidad por tanto"
+  },
+  {
+    "start": 664.29,
+    "duration": 4.109,
+    "text": "necesitamos implementar algún tipo de"
+  },
+  {
+    "start": 666.48,
+    "duration": 3.9,
+    "text": "filtro para evitar que cuando el mercado"
+  },
+  {
+    "start": 668.399,
+    "duration": 4.021,
+    "text": "entre en tendencias nos quedemos"
+  },
+  {
+    "start": 670.38,
+    "duration": 4.35,
+    "text": "posicionados muy pronto en contra y"
+  },
+  {
+    "start": 672.42,
+    "duration": 4.229,
+    "text": "tengamos que soportar estos movimientos"
+  },
+  {
+    "start": 674.73,
+    "duration": 4.32,
+    "text": "que se generan drogas muy altos"
+  },
+  {
+    "start": 676.649,
+    "duration": 4.17,
+    "text": "aquí en principio uno podría decir bueno"
+  },
+  {
+    "start": 679.05,
+    "duration": 4.08,
+    "text": "salvo esta operación donde venden aquí"
+  },
+  {
+    "start": 680.819,
+    "duration": 5.161,
+    "text": "compras aquí el resto tampoco hay una"
+  },
+  {
+    "start": 683.13,
+    "duration": 5.129,
+    "text": "pérdida tan grande a pesar de que se ha"
+  },
+  {
+    "start": 685.98,
+    "duration": 4.529,
+    "text": "estado padeciendo potencialmente un"
+  },
+  {
+    "start": 688.259,
+    "duration": 3.721,
+    "text": "resultado mucho más adverso pero no hay"
+  },
+  {
+    "start": 690.509,
+    "duration": 3.481,
+    "text": "que olvidarse de que padecer estos"
+  },
+  {
+    "start": 691.98,
+    "duration": 3.45,
+    "text": "resultados en vivo es es una labor"
+  },
+  {
+    "start": 693.99,
+    "duration": 2.909,
+    "text": "durísima es decir es muy muy"
+  },
+  {
+    "start": 695.43,
+    "duration": 3.5,
+    "text": "problemático cuando uno tiene una"
+  },
+  {
+    "start": 696.899,
+    "duration": 5.211,
+    "text": "posición abierta"
+  },
+  {
+    "start": 698.93,
+    "duration": 5.7,
+    "text": "el resultado acumulado es muy muy"
+  },
+  {
+    "start": 702.11,
+    "duration": 3.93,
+    "text": "negativo muy en contra del portfolio y"
+  },
+  {
+    "start": 704.63,
+    "duration": 3.149,
+    "text": "no sabe exactamente cuándo se va a"
+  },
+  {
+    "start": 706.04,
+    "duration": 3.51,
+    "text": "producir esa reversión todo este tipo de"
+  },
+  {
+    "start": 707.779,
+    "duration": 4.141,
+    "text": "situaciones hay que intentar evitarlas"
+  },
+  {
+    "start": 709.55,
+    "duration": 4.38,
+    "text": "al máximo y tenerlos muy controladas por"
+  },
+  {
+    "start": 711.92,
+    "duration": 5.3,
+    "text": "tanto lo que voy a hacer a continuación"
+  },
+  {
+    "start": 713.93,
+    "duration": 6.719,
+    "text": "es proponer una manera distinta de"
+  },
+  {
+    "start": 717.22,
+    "duration": 6.45,
+    "text": "operar de manera que podamos minimizar"
+  },
+  {
+    "start": 720.649,
+    "duration": 6.341,
+    "text": "todos estos procesos"
+  },
+  {
+    "start": 723.67,
+    "duration": 6.169,
+    "text": "de tendencia en contra"
+  },
+  {
+    "start": 726.99,
+    "duration": 5.73,
+    "text": "el comportamiento básico de la operativa"
+  },
+  {
+    "start": 729.839,
+    "duration": 5.37,
+    "text": "no varía demasiado pero tengamos una"
+  },
+  {
+    "start": 732.72,
+    "duration": 4.619,
+    "text": "posición a nivel de gestión un poquito"
+  },
+  {
+    "start": 735.209,
+    "duration": 4.521,
+    "text": "más relajada nos vemos en el siguiente"
+  },
+  {
+    "start": 737.339,
+    "duration": 2.391,
+    "text": "vídeo"
+  }
+]

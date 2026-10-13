@@ -671,7 +671,7 @@ export const BotModal: React.FC = () => {
                 <div className="bg-[#1e222d] p-2.5 rounded-lg border border-[#2a2e39] flex items-center justify-between">
                   <div>
                     <span className="text-[#787b86] text-[10px] block">Comisión</span>
-                    <span className="text-[#10b981] font-mono font-bold text-xs">0% FEE</span>
+                    <span className="text-[#10b981] font-mono font-bold text-xs">0% FEE PURO</span>
                   </div>
                   <button
                     onClick={resetSubFunds}
@@ -681,6 +681,22 @@ export const BotModal: React.FC = () => {
                     <RefreshCw className="w-3.5 h-3.5" />
                   </button>
                 </div>
+              </div>
+
+              {/* Fee Simulation Bar */}
+              <div className="p-3 bg-[#131722] rounded-lg border border-[#2a2e39] flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] text-[#787b86]">Simulación Hyperliquid:</span>
+                  <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold">
+                    Maker (0.010% Alo): ${(bankSummary.makerNetPnL ?? bankSummary.totalPurePnL).toFixed(2)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold">
+                    Taker (0.045% Ioc): ${(bankSummary.takerNetPnL ?? bankSummary.totalPurePnL).toFixed(2)}
+                  </span>
+                </div>
+                <span className="text-[10px] text-emerald-400 font-bold">
+                  ⚡ 77.8% de Ahorro con Maker Post-Only
+                </span>
               </div>
 
               {/* Live Comparative Table */}
@@ -825,7 +841,7 @@ export const BotModal: React.FC = () => {
 
                             <td className="py-2 px-2 text-right">
                               <span
-                                className={`font-bold ${
+                                className={`font-bold block ${
                                   fund.stats.purePnL === 0
                                     ? 'text-[#787b86]'
                                     : isPnLPos
@@ -834,6 +850,9 @@ export const BotModal: React.FC = () => {
                                 }`}
                               >
                                 {fund.stats.purePnL > 0 ? '+' : ''}${fund.stats.purePnL.toFixed(2)}
+                              </span>
+                              <span className="text-[9px] text-[#787b86] font-mono block">
+                                M: ${(fund.stats.makerNetPnL ?? fund.stats.purePnL).toFixed(2)}
                               </span>
                             </td>
 

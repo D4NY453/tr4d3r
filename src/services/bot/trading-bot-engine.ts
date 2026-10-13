@@ -8,6 +8,8 @@ import {
   SubFund,
   BankTestSummary,
   ClosedTrade,
+  MarketRegimeInfo,
+  MarketRegimeType,
 } from '@/types';
 import { roundPriceDynamic } from '../indicators/calculations';
 
@@ -358,6 +360,97 @@ export class TickRollingWindow {
     return 'NEUTRAL';
   }
 
+  /**
+   * Filtro de Régimen y Sentimiento (Grok / Heurístico sin latencia)
+   * Analiza los últimos 30 segundos de micro-velas y clasifica el mercado en:
+   * - TRENDING: Movimiento direccional eficiente y limpio
+   * - RANGING: Consolidación lateral con volatilidad normal
+   * - TOXIC_CHOP: Alta frecuencia de cruces contradictorios o volatilidad muerta
+   */
+  public getMarketRegime(): MarketRegimeInfo {
+    const candles = this.buildCandles(1, 30);
+    if (candles.length < 5) {
+      return {
+        regime: 'RANGING',
+        sentiment: 'NEUTRAL',
+        confidence: 50,
+        reason: 'Acumulando micro-ticks (muestra < 5s)',
+      };
+    }
+
+    const closes = candles.map((c) => c.close);
+    const n = closes.length;
+    const firstClose = closes[0];
+    const lastClose = closes[n - 1];
+
+    // 1. Rango de volatilidad en 30s
+    const maxHigh = Math.max(...candles.map((c) => c.high));
+    const minLow = Math.min(...candles.map((c) => c.low));
+    const priceSpan = maxHigh - minLow;
+    const avgPrice = lastClose || 1;
+    const rangePct = priceSpan / avgPrice;
+
+    // 2. Eficiencia de Kaufman (Net Move vs Total Path) y alternancia de signos
+    const netMove = Math.abs(lastClose - firstClose);
+    let totalPath = 0;
+    let flips = 0;
+
+    for (let i = 1; i < n; i++) {
+      const diff = Math.abs(closes[i] - closes[i - 1]);
+      totalPath += diff;
+
+      const currentDir = closes[i] - closes[i - 1];
+      const prevDir = i >= 2 ? closes[i - 1] - closes[i - 2] : 0;
+      if (currentDir * prevDir < 0) {
+        flips++;
+      }
+    }
+
+    const efficiency = totalPath > 0 ? netMove / totalPath : 0;
+    const flipRate = n > 2 ? flips / (n - 2) : 0;
+
+    // Detección de TOXIC_CHOP:
+    // - Volatilidad muerta (rangePct < 0.00015 en 30s)
+    // - O alta alternancia con muy baja eficiencia direccional (flipRate >= 0.55 && efficiency < 0.25)
+    // - O eficiencia extremadamente pobre con muestra suficiente (efficiency < 0.15 && n >= 15)
+    const isDeadVol = rangePct < 0.00015;
+    const isWhipsaw = flipRate >= 0.55 && efficiency < 0.25;
+    const isExtremeChop = efficiency < 0.15 && n >= 15;
+
+    if (isDeadVol || isWhipsaw || isExtremeChop) {
+      return {
+        regime: 'TOXIC_CHOP',
+        sentiment: 'NEUTRAL',
+        confidence: Math.min(95, Math.round((1 - efficiency) * 100)),
+        reason: isDeadVol
+          ? 'Volatilidad muerta en micro-rango (< 0.015% en 30s)'
+          : 'Alta frecuencia de cruces contradictorios y oscilación errática (Whipsaw)',
+      };
+    }
+
+    // Detección de TRENDING:
+    if (efficiency >= 0.45 && rangePct >= 0.0003) {
+      const isBull = lastClose > firstClose;
+      return {
+        regime: 'TRENDING',
+        sentiment: isBull ? 'BULLISH' : 'BEARISH',
+        confidence: Math.min(95, Math.round(efficiency * 100)),
+        reason: isBull
+          ? `Tendencia alcista limpia (Eficiencia ${(efficiency * 100).toFixed(0)}%)`
+          : `Tendencia bajista limpia (Eficiencia ${(efficiency * 100).toFixed(0)}%)`,
+      };
+    }
+
+    // RANGING normal (consolidación balanceada):
+    const sentiment = lastClose > firstClose ? 'BULLISH' : lastClose < firstClose ? 'BEARISH' : 'NEUTRAL';
+    return {
+      regime: 'RANGING',
+      sentiment,
+      confidence: 65,
+      reason: 'Consolidación en rango normal con volatilidad balanceada',
+    };
+  }
+
   public clear(): void {
     this.ticks = [];
   }
@@ -382,7 +475,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-2',
@@ -395,7 +488,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-3',
@@ -408,7 +501,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-4',
@@ -421,7 +514,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-5',
@@ -434,7 +527,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-6',
@@ -447,7 +540,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-7',
@@ -460,7 +553,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-8',
@@ -473,7 +566,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-9',
@@ -486,7 +579,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
     {
       id: 'fund-10',
@@ -499,7 +592,7 @@ export function createInitialSubFunds(): SubFund[] {
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
-      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
+      stats: { totalTrades: 0, wins: 0, losses: 0, winRate: 0, purePnL: 0, makerNetPnL: 0, takerNetPnL: 0, peakCapital: 10000, maxDrawdownPercent: 0 },
     },
   ];
 }
@@ -708,6 +801,7 @@ export function processTickForSubFunds(
 
   const trend15s = rollingWindow.getMicroTrend(15);
   const trend1m = rollingWindow.getMicroTrend(60);
+  const marketRegime = rollingWindow.getMarketRegime();
 
   const tradesExecuted: ClosedTrade[] = [];
   const updatedFunds = subFunds.map((fund) => {
@@ -727,13 +821,14 @@ export function processTickForSubFunds(
       macroTrend = trend15s === trend1m ? trend15s : 'NEUTRAL';
     }
     f.lastMacroTrend = macroTrend;
+    f.lastMarketRegime = marketRegime;
 
     // 2. Construir micro-velas de ejecución
     const execSeconds = f.executionTimeframe === '1s' ? 1 : f.executionTimeframe === '3s' ? 3 : 5;
     const microCandles = rollingWindow.buildCandles(execSeconds, 30);
     const strategyEval = evaluateMicroStrategy(f.strategy, microCandles, price, trend1m);
 
-    // 3. Si ya tiene posición activa: Monitorear TP, SL o Salida Contraria
+    // 3. Si ya tiene posición activa: Monitorear TP, SL o Salida Contraria (Las salidas NUNCA se bloquean)
     if (f.activePosition) {
       const pos = f.activePosition;
 
@@ -766,8 +861,21 @@ export function processTickForSubFunds(
         const pnlUSDT = Number((pos.amountUSDT * rawMovePct).toFixed(4));
         const pnlPercent = Number((rawMovePct * 100).toFixed(2));
 
+        // Simulación Comparativa de Fees (Maker Post-Only 0.010% vs Taker 0.045% por fill):
+        const entryNotional = pos.amountUSDT;
+        const exitNotional = pos.amountUSDT * (exitPrice / pos.entryPrice);
+        const tradeTurnover = entryNotional + exitNotional;
+
+        const tradeMakerFee = tradeTurnover * 0.00010; // 0.010% Maker Post-Only
+        const tradeTakerFee = tradeTurnover * 0.00045; // 0.045% Taker
+
+        const tradeMakerNet = pnlUSDT - tradeMakerFee;
+        const tradeTakerNet = pnlUSDT - tradeTakerFee;
+
         f.currentCapital = Number((f.currentCapital + pnlUSDT).toFixed(2));
         f.stats.purePnL = Number((f.stats.purePnL + pnlUSDT).toFixed(2));
+        f.stats.makerNetPnL = Number(((f.stats.makerNetPnL ?? 0) + tradeMakerNet).toFixed(4));
+        f.stats.takerNetPnL = Number(((f.stats.takerNetPnL ?? 0) + tradeTakerNet).toFixed(4));
         f.stats.totalTrades += 1;
 
         if (pnlUSDT > 0) {
@@ -818,8 +926,20 @@ export function processTickForSubFunds(
         pos.pnlPercent = Number((currentRawMovePct * 100).toFixed(2));
       }
     }
-    // 4. Si NO tiene posición activa: Evaluar Entrada Bidireccional con Confirmación MTF
+    // 4. Si NO tiene posición activa: Evaluar Entrada Bidireccional con Filtro Grok Anti-Chop y Confirmación MTF
     else {
+      // Filtro de Régimen Grok Anti-Chop:
+      // Si detecta TOXIC_CHOP, bloquea nuevas entradas en los sub-fondos de 1s para proteger el Win Rate,
+      // dejando operar solo a los de 3s y 5s cuando tengan confirmación clara (no neutral).
+      if (marketRegime.regime === 'TOXIC_CHOP') {
+        if (f.executionTimeframe === '1s') {
+          return f; // Bloquea entradas en 1s durante régimen tóxico
+        }
+        if (macroTrend === 'NEUTRAL') {
+          return f; // Para 3s y 5s, exige confirmación tendencial no-neutral
+        }
+      }
+
       // Regla Bidireccional:
       // - Si confirmación es BULLISH: Habilita LONG (BUY), bloquea SHORT.
       // - Si confirmación es BEARISH: Habilita SHORT (SELL), bloquea LONG.
@@ -876,12 +996,14 @@ export function processTickForSubFunds(
 }
 
 /**
- * Calcula el resumen global del Banco de Pruebas de $100k
+ * Calcula el resumen global del Banco de Pruebas de $100k con simulación comparativa de Fees (Maker 0.010% vs Taker 0.045%)
  */
 export function calculateBankTestSummary(subFunds: SubFund[]): BankTestSummary {
   let totalInitialCapital = 0;
   let totalCurrentCapital = 0;
   let totalPurePnL = 0;
+  let totalMakerNetPnL = 0;
+  let totalTakerNetPnL = 0;
   let totalTrades = 0;
   let totalWins = 0;
   let totalLosses = 0;
@@ -890,6 +1012,8 @@ export function calculateBankTestSummary(subFunds: SubFund[]): BankTestSummary {
     totalInitialCapital += fund.initialCapital;
     totalCurrentCapital += fund.currentCapital;
     totalPurePnL += fund.stats.purePnL;
+    totalMakerNetPnL += (fund.stats.makerNetPnL ?? fund.stats.purePnL);
+    totalTakerNetPnL += (fund.stats.takerNetPnL ?? fund.stats.purePnL);
     totalTrades += fund.stats.totalTrades;
     totalWins += fund.stats.wins;
     totalLosses += fund.stats.losses;
@@ -901,6 +1025,8 @@ export function calculateBankTestSummary(subFunds: SubFund[]): BankTestSummary {
     totalInitialCapital,
     totalCurrentCapital: Number(totalCurrentCapital.toFixed(2)),
     totalPurePnL: Number(totalPurePnL.toFixed(2)),
+    makerNetPnL: Number(totalMakerNetPnL.toFixed(2)),
+    takerNetPnL: Number(totalTakerNetPnL.toFixed(2)),
     totalTrades,
     totalWins,
     totalLosses,

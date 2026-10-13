@@ -45,6 +45,16 @@ export const BankTestModal: React.FC = () => {
 
   const isProfitPositive = summary.totalPurePnL >= 0;
 
+  const activeRegime = useMemo(() => {
+    const fundWithRegime = subFunds.find((f) => f.lastMarketRegime);
+    return fundWithRegime?.lastMarketRegime;
+  }, [subFunds]);
+
+  const feeSavings = useMemo(() => {
+    const diff = (summary.makerNetPnL ?? 0) - (summary.takerNetPnL ?? 0);
+    return Math.max(0, diff);
+  }, [summary]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 select-none">
       <div className="w-full max-w-6xl bg-[#131722] border border-[#2a2e39] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
@@ -61,7 +71,7 @@ export const BankTestModal: React.FC = () => {
                   10 Sub-Fondos de $10,000
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#2962ff]/15 text-[#2962ff] border border-[#2962ff]/30">
-                  0% Comisión (Fee = 0)
+                  Filtro Anti-Chop Grok + Post-Only 0.01%
                 </span>
               </div>
               <p className="text-xs text-[#787b86]">
@@ -141,6 +151,53 @@ export const BankTestModal: React.FC = () => {
             <span className="text-[#10b981] font-mono font-bold text-sm flex items-center space-x-1">
               <Zap className="w-3.5 h-3.5 fill-current text-[#10b981]" />
               <span>0% FEE PURO</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Phase 2: Fee Simulation & Grok Regime Bar */}
+        <div className="px-6 py-2.5 bg-[#121620] border-b border-[#2a2e39] flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] text-[#787b86] font-medium">Simulación Hyperliquid:</span>
+              <span className="px-2 py-0.5 rounded font-mono text-[11px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold" title="Hyperliquid Maker Fee: 0.010% por fill (tif: Alo)">
+                Maker Post-Only: ${(summary.makerNetPnL ?? summary.totalPurePnL).toFixed(2)}
+              </span>
+              <span className="px-2 py-0.5 rounded font-mono text-[11px] bg-amber-500/15 text-amber-400 border border-amber-500/30 font-semibold" title="Hyperliquid Taker Fee: 0.045% por fill (tif: Ioc)">
+                Taker Estándar: ${(summary.takerNetPnL ?? summary.totalPurePnL).toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-1 text-[11px] text-emerald-400 font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Ahorro Comisiones: <b>+77.8%</b> (${feeSavings.toFixed(2)} USDT guardados)</span>
+            </div>
+          </div>
+
+          {/* Grok Anti-Chop Regime Indicator */}
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] text-[#787b86]">Régimen 30s (Grok):</span>
+            <span
+              className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold border flex items-center space-x-1 ${
+                activeRegime?.regime === 'TRENDING'
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  : activeRegime?.regime === 'TOXIC_CHOP'
+                  ? 'bg-rose-500/15 text-rose-400 border-rose-500/30 animate-pulse'
+                  : 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+              }`}
+              title={activeRegime?.reason || 'Calculando régimen con ventana de ticks'}
+            >
+              <Activity className="w-3 h-3" />
+              <span>
+                {activeRegime?.regime === 'TRENDING'
+                  ? `TRENDING (${activeRegime.sentiment})`
+                  : activeRegime?.regime === 'TOXIC_CHOP'
+                  ? 'TOXIC CHOP (1s Pausa)'
+                  : 'RANGING'}
+              </span>
+              {activeRegime?.confidence ? (
+                <span className="opacity-80">({activeRegime.confidence}%)</span>
+              ) : null}
             </span>
           </div>
         </div>
@@ -299,10 +356,10 @@ export const BankTestModal: React.FC = () => {
                           </span>
                         </td>
 
-                        {/* 8. Pure PnL */}
+                        {/* 8. Pure PnL & Fee Breakdown */}
                         <td className="py-3 px-3 text-right">
                           <span
-                            className={`font-bold ${
+                            className={`font-bold block ${
                               fund.stats.purePnL === 0
                                 ? 'text-[#787b86]'
                                 : isPnLPos
@@ -311,6 +368,9 @@ export const BankTestModal: React.FC = () => {
                             }`}
                           >
                             {fund.stats.purePnL > 0 ? '+' : ''}${fund.stats.purePnL.toFixed(2)}
+                          </span>
+                          <span className="text-[9px] text-[#787b86] font-mono block">
+                            M: ${(fund.stats.makerNetPnL ?? fund.stats.purePnL).toFixed(2)} | T: ${(fund.stats.takerNetPnL ?? fund.stats.purePnL).toFixed(2)}
                           </span>
                         </td>
 

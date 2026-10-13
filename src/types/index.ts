@@ -214,6 +214,15 @@ export interface TelegramConfig {
   minSignalScore: number;
 }
 
+export type MarketRegimeType = 'TRENDING' | 'RANGING' | 'TOXIC_CHOP';
+
+export interface MarketRegimeInfo {
+  regime: MarketRegimeType;
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  confidence: number;
+  reason: string;
+}
+
 export interface MicroCandle {
   time: number;
   open: number;
@@ -229,6 +238,8 @@ export interface SubFundStats {
   losses: number;
   winRate: number;
   purePnL: number;
+  makerNetPnL?: number; // Descontando 0.010% Hyperliquid Maker Post-Only
+  takerNetPnL?: number; // Descontando 0.045% Hyperliquid Taker
   peakCapital: number;
   maxDrawdownPercent: number;
 }
@@ -246,12 +257,15 @@ export interface SubFund {
   closedTrades: ClosedTrade[];
   stats: SubFundStats;
   lastMacroTrend?: MacroTrend;
+  lastMarketRegime?: MarketRegimeInfo;
 }
 
 export interface BankTestSummary {
   totalInitialCapital: number; // 100,000
   totalCurrentCapital: number;
   totalPurePnL: number;
+  makerNetPnL?: number; // Simulación neta Maker Post-Only (0.010%)
+  takerNetPnL?: number; // Simulación neta Taker (0.045%)
   totalTrades: number;
   totalWins: number;
   totalLosses: number;

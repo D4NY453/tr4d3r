@@ -338,18 +338,30 @@ export async function executeHyperliquidOrder(params: {
     }
 
     // Determine execution price
+    const assetCtxs = await infoClient.metaAndAssetCtxs();
+    const ctx = assetCtxs[1]?.[assetIndex];
+    const midPx = parseFloat(ctx?.midPx || ctx?.markPx || '0');
+
     let targetPrice = px;
-    if (!targetPrice || orderType === 'MARKET') {
-      const assetCtxs = await infoClient.metaAndAssetCtxs();
-      const ctx = assetCtxs[1]?.[assetIndex];
-      const mid = parseFloat(ctx?.midPx || ctx?.markPx || '0');
-      if (!mid) {
+    if (orderType === 'MARKET') {
+      if (!midPx) {
         return { status: 'err', error: `No se pudo obtener el precio actual para ${cleanCoin}` };
       }
       // Apply slippage for market execution
       targetPrice = isBuy
-        ? mid * (1 + slippagePercent / 100)
-        : mid * (1 - slippagePercent / 100);
+        ? midPx * (1 + slippagePercent / 100)
+        : midPx * (1 - slippagePercent / 100);
+    } else {
+      // LIMIT Post-Only Execution (Garantiza 0.010% Maker Fee)
+      // Ajusta el precio límite para que no cruce el libro
+      const basePx = targetPrice || midPx;
+      if (midPx > 0) {
+        targetPrice = isBuy
+          ? Math.min(basePx, midPx * 0.9999)
+          : Math.max(basePx, midPx * 1.0001);
+      } else {
+        targetPrice = basePx;
+      }
     }
 
     // Format price according to Hyperliquid rules (max 5 significant figures or standard precision)
@@ -374,7 +386,7 @@ export async function executeHyperliquidOrder(params: {
           r: reduceOnly,
           t: {
             limit: {
-              tif: orderType === 'MARKET' ? ('Ioc' as const) : ('Gtc' as const),
+              tif: orderType === 'MARKET' ? ('Ioc' as const) : ('Alo' as const),
             },
           },
           ...(cloid ? { c: cloid } : {}),

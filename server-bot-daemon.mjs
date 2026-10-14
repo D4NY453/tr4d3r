@@ -24,16 +24,17 @@ const DEFAULT_CONFIG = {
   maxConcurrentTrades: 5, // Límite de trades simultáneos (configurable de 1 a 10)
   minRiskReward: 1.6, // Mínimo 1:1.6 de relación Riesgo/Beneficio
   allowedSymbols: [], // Empty = TOP Volumen Perps & Memes
-  timeframe: '5m', // Velas de 5m (confluencia alta convicción)
-  scanIntervalSeconds: 12, // Escaneo cada 12 segundos
+  timeframe: '1m', // Velas de 1m por defecto para alta frecuencia / scalping
+  scanIntervalSeconds: 6, // Escaneo cada 6 segundos
+  minSignalScore: 55, // Convicción mínima para generar órdenes (55/100)
   tp1Percent: 0.016, // +1.6% movimiento (+16% ROE = +$1.60 USD bruto, ~+$1.50 neto)
   tp2Percent: 0.026, // +2.6% movimiento (+26% ROE = +$2.60 USD bruto, ~+$2.50 neto)
   slPercent: 0.009, // -0.9% movimiento (-9% ROE = -$0.90 USD max pérdida)
   instantProfitTake: true, // Proteger y cerrar si alcanza el objetivo neto
   minInstantProfitUSD: 1.50, // MÍNIMO +$1.50 USD NETOS (NUNCA micro-centavos)
   maxDrawdownPercent: 0.08, // 8% drawdown límite de seguridad (Circuit Breaker Kill-Switch)
-  longOnly: true, // MODO SOLO COMPRAS: vetar cortos tras auditoría de Ditto (17% winrate en cortos vs 29% en largos)
-  requireMacroTrendConfirmation: true, // JERARQUÍA MTF: solo operar si el timeframe macro confirma alcista
+  longOnly: false, // Permitir compras y ventas para mayor rotación de órdenes
+  requireMacroTrendConfirmation: true, // JERARQUÍA MTF: solo operar si el timeframe macro confirma
 };
 
 const MEME_REGEX = /PEPE|DOGE|SHIB|BONK|WIF|POPCAT|FART|TRUMP|PENGU|MOODENG|GOAT|BRETT|PURR|MELANIA|CHILL|PNUT|ACT|BOME|MEME|CAT|NEIRO|MOG|GIGA|SPX/i;
@@ -1467,8 +1468,8 @@ export class ServerBotDaemon {
         const assetIndex = meta.universe.findIndex((u) => u.name === coin);
         if (assetIndex === -1) continue;
 
-        // Fetch recent 5m candles (100 candles = 500 minutes)
-        const durationMinutes = 500;
+        // Fetch recent candles (at least 70-100 candles)
+        const durationMinutes = targetTimeframe === '1m' ? 120 : targetTimeframe === '3m' ? 300 : 500;
         let candlesRaw = [];
         try {
           candlesRaw = await this.infoClient.candleSnapshot({
@@ -1675,12 +1676,14 @@ export class ServerBotDaemon {
         let signalReason = '';
         let signalScore = 0;
 
-        // Filtro estricto de alta convicción: puntuación mínima 70/100
-        if (buyScore >= 70 && buyScore > sellScore) {
+        const minScore = this.config.minSignalScore || 55;
+
+        // Filtro de alta convicción configurable (default 55 para mayor frecuencia de órdenes)
+        if (buyScore >= minScore && buyScore > sellScore) {
           signalType = 'BUY';
           signalReason = buyReasons.join(' + ');
           signalScore = buyScore;
-        } else if (!isLongOnly && sellScore >= 70 && sellScore > buyScore) {
+        } else if (!isLongOnly && sellScore >= minScore && sellScore > buyScore) {
           signalType = 'SELL';
           signalReason = sellReasons.join(' + ');
           signalScore = sellScore;
@@ -1689,15 +1692,16 @@ export class ServerBotDaemon {
         if (signalType) {
           // =========================================================================
           // JERARQUÍA DE TENDENCIAS MULTITEMPORAL (MTF) ESTRICTA
-          // Para validar BUY, el timeframe macro superior debe confirmar tendencia alcista
           // =========================================================================
           let macroInfo = null;
           if (this.config.requireMacroTrendConfirmation !== false) {
             macroInfo = await this.getMacroTrend(coin, targetTimeframe);
-            if (!macroInfo.isBullish) {
+            const isBullish = macroInfo.isBullish;
+            const isMacroAligned = (signalType === 'BUY' && isBullish) || (signalType === 'SELL' && !isBullish);
+            if (!isMacroAligned) {
               this.addLog(
                 'MTF_VETO',
-                `🛡️ [MTF VETO] Entrada ${signalType} en ${coin} bloqueada. 5m Convicción: ${signalScore}/100 pero ${macroInfo.macroTf} Macro NO confirma alcista (${macroInfo.reason}).`
+                `🛡️ [MTF VETO] Entrada ${signalType} en ${coin} bloqueada. ${targetTimeframe} Convicción: ${signalScore}/100 pero ${macroInfo.macroTf} Macro NO confirma (${macroInfo.reason}).`
               );
               continue; // Descartar entrada
             }
@@ -1944,16 +1948,17 @@ export class ServerBotDaemon {
       isAllMarkets: isAll,
       maxConcurrentTrades: this.config.maxConcurrentTrades,
       timeframe: this.config.timeframe || '1m',
-      scanIntervalSeconds: this.config.scanIntervalSeconds || 12,
+      scanIntervalSeconds: this.config.scanIntervalSeconds || 6,
+      minSignalScore: this.config.minSignalScore || 55,
       instantProfitTake: this.config.instantProfitTake ?? true,
       minInstantProfitUSD: this.config.minInstantProfitUSD ?? 1.50,
       maxDrawdownPercent: this.config.maxDrawdownPercent || 0.08,
       longOnly: this.config.longOnly !== false,
       requireMacroTrendConfirmation: this.config.requireMacroTrendConfirmation !== false,
       macroHierarchy: {
-        baseTimeframe: '5m',
-        macroTimeframe: '15m',
-        rule: 'Scalping 5m requiere confirmación alcista en 15m (EMA20 >= EMA50 & Precio >= EMA50)',
+        baseTimeframe: this.config.timeframe || '1m',
+        macroTimeframe: getMacroTimeframe(this.config.timeframe || '1m'),
+        rule: `Scalping ${this.config.timeframe || '1m'} requiere confirmación con ${getMacroTimeframe(this.config.timeframe || '1m')}`,
         active: this.config.requireMacroTrendConfirmation !== false,
       },
       sessionStartBalanceUSD: this.state.sessionStartBalanceUSD || 0,

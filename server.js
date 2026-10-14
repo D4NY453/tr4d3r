@@ -100,23 +100,33 @@ const server = http.createServer(async (req, res) => {
           wallet = '0x' + wallet;
         }
 
+        const tf = body.timeframe || botDaemon.config.timeframe || '1m';
+        const isLongOnly = body.longOnly !== undefined ? Boolean(body.longOnly) : (botDaemon.config.longOnly ?? false);
+
         botDaemon.saveConfig({
           walletAddress: wallet,
           agentPrivateKey: key,
           capitalPerTrade: body.capitalPerTrade ? Number(body.capitalPerTrade) : botDaemon.config.capitalPerTrade,
           leverage: body.leverage ? Number(body.leverage) : botDaemon.config.leverage,
           allowedSymbols: Array.isArray(body.allowedSymbols) ? body.allowedSymbols : [],
-          timeframe: '5m',
-          maxConcurrentTrades: body.maxConcurrentTrades !== undefined ? Number(body.maxConcurrentTrades) : (botDaemon.config.maxConcurrentTrades || 5),
+          timeframe: tf,
+          scanIntervalSeconds: body.scanIntervalSeconds ? Number(body.scanIntervalSeconds) : (botDaemon.config.scanIntervalSeconds || 6),
+          maxConcurrentTrades: body.maxConcurrentTrades !== undefined ? Number(body.maxConcurrentTrades) : (botDaemon.config.maxConcurrentTrades || 8),
           instantProfitTake: body.instantProfitTake !== undefined ? Boolean(body.instantProfitTake) : (botDaemon.config.instantProfitTake ?? true),
           minInstantProfitUSD: body.minInstantProfitUSD !== undefined ? Number(body.minInstantProfitUSD) : (botDaemon.config.minInstantProfitUSD ?? 1.50),
           maxDrawdownPercent: body.maxDrawdownPercent !== undefined ? Number(body.maxDrawdownPercent) : (botDaemon.config.maxDrawdownPercent ?? 0.08),
-          longOnly: body.longOnly !== undefined ? Boolean(body.longOnly) : (botDaemon.config.longOnly ?? true),
+          longOnly: isLongOnly,
+          minSignalScore: body.minSignalScore ? Number(body.minSignalScore) : (botDaemon.config.minSignalScore || 55),
+          requireMacroTrendConfirmation: body.requireMacroTrendConfirmation !== undefined ? Boolean(body.requireMacroTrendConfirmation) : (botDaemon.config.requireMacroTrendConfirmation ?? true),
         });
 
         botDaemon.start();
         res.writeHead(200);
-        res.end(JSON.stringify({ success: true, message: 'Bot de Alta Convicción 24/7 activado [Solo Compras / Long Only] (Velas 5m, TP +$1.50 a +$2.50 netos)', status: botDaemon.getStatus() }));
+        res.end(JSON.stringify({
+          success: true,
+          message: `Bot 24/7 activado [${isLongOnly ? 'Solo Compras' : 'Compras y Ventas'}] (Velas ${tf}, escaneo cada ${botDaemon.config.scanIntervalSeconds}s)`,
+          status: botDaemon.getStatus(),
+        }));
         return;
       }
 

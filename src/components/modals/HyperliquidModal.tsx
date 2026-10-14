@@ -75,6 +75,7 @@ export const HyperliquidModal: React.FC = () => {
     hyperliquidClosedTrades,
     isLoadingHyperliquidClosedTrades,
     fetchHyperliquidClosedTrades,
+    currentTimeframe,
   } = useTradingStore();
 
   const [activeTab, setActiveTab] = useState<Tab>('markets');
@@ -306,8 +307,10 @@ export const HyperliquidModal: React.FC = () => {
           capitalPerTrade: botConfig.capitalPerTrade,
           leverage: hyperliquidDefaultLeverage,
           allowedSymbols: [], // All Perps, Memes & Predictions
-          timeframe: '5m',
-          maxConcurrentTrades: serverStatus?.maxConcurrentTrades || botConfig.maxConcurrentTrades || 5,
+          timeframe: currentTimeframe || '1m',
+          scanIntervalSeconds: 6,
+          minSignalScore: 55,
+          maxConcurrentTrades: serverStatus?.maxConcurrentTrades || botConfig.maxConcurrentTrades || 8,
           instantProfitTake: instantProfitEnabled,
           minInstantProfitUSD: parseFloat(minProfitInput) || 1.50,
           maxDrawdownPercent: 0.08,

@@ -1469,10 +1469,23 @@ export const useTradingStore = create<TradingState>()(
       processMicroTick: (price, volume = 1, timestamp = Date.now()) => {
         if (!price || isNaN(price) || price <= 0) return;
         const state = get();
-        const fundsToProcess =
+        let fundsToProcess =
           state.subFunds && state.subFunds.length === 10
             ? state.subFunds
             : createInitialSubFunds();
+
+        // Migración segura: si subFunds proviene de datos antiguos de localStorage sin makerNetPnL
+        if (fundsToProcess[0]?.stats?.makerNetPnL === undefined) {
+          fundsToProcess = fundsToProcess.map((f) => ({
+            ...f,
+            stats: {
+              ...f.stats,
+              makerNetPnL: f.stats?.makerNetPnL ?? 0,
+              takerNetPnL: f.stats?.takerNetPnL ?? 0,
+              maxDrawdownPercent: f.stats?.maxDrawdownPercent ?? 0,
+            },
+          }));
+        }
 
         const result = processTickForSubFunds(
           price,

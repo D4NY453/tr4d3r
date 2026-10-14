@@ -1705,8 +1705,27 @@ export const HyperliquidModal: React.FC = () => {
                     <span className="text-xs font-mono text-cyan-400 font-semibold">
                       Alta Convicción 5m
                     </span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                      <TrendingUp className="w-3 h-3 text-emerald-400" /> SOLO COMPRAS (LONG)
+                    <span
+                      className={`text-[10px] font-mono font-bold flex items-center gap-1 mt-0.5 ${
+                        botConfig.tradeDirection === 'SHORT_ONLY'
+                          ? 'text-rose-400'
+                          : botConfig.tradeDirection === 'LONG_ONLY'
+                          ? 'text-emerald-400'
+                          : 'text-amber-400'
+                      }`}
+                    >
+                      {botConfig.tradeDirection === 'SHORT_ONLY' ? (
+                        <TrendingDown className="w-3 h-3 text-rose-400" />
+                      ) : (
+                        <TrendingUp className="w-3 h-3 text-emerald-400" />
+                      )}
+                      <span>
+                        {botConfig.tradeDirection === 'LONG_ONLY'
+                          ? 'SOLO COMPRAS (LONG)'
+                          : botConfig.tradeDirection === 'SHORT_ONLY'
+                          ? 'SOLO VENTAS (SHORT)'
+                          : 'COMPRAS Y VENTAS (AMBAS)'}
+                      </span>
                     </span>
                   </div>
                 </div>

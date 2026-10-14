@@ -41,10 +41,6 @@ export const BankTestModal: React.FC = () => {
     return calculateBankTestSummary(subFunds || []);
   }, [subFunds]);
 
-  if (!isBankTestModalOpen) return null;
-
-  const isProfitPositive = summary.totalPurePnL >= 0;
-
   const activeRegime = useMemo(() => {
     const fundWithRegime = subFunds.find((f) => f.lastMarketRegime);
     return fundWithRegime?.lastMarketRegime;
@@ -54,6 +50,10 @@ export const BankTestModal: React.FC = () => {
     const diff = (summary.makerNetPnL ?? 0) - (summary.takerNetPnL ?? 0);
     return Math.max(0, diff);
   }, [summary]);
+
+  if (!isBankTestModalOpen) return null;
+
+  const isProfitPositive = summary.totalPurePnL >= 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 select-none">

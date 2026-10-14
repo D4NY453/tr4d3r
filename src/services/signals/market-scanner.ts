@@ -126,6 +126,7 @@ export async function scanAllMarketOpportunities(
       bollingerBreakout: true,
       bollingerSqueeze: true,
       bollingerPercentBDivergence: true,
+      dittoVerifiedShort: true,
     },
     maxPairs = 60,
     onProgress,

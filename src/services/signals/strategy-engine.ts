@@ -9,9 +9,9 @@ import {
   calculateATR,
   roundPriceDynamic,
 } from '../indicators/calculations';
-import { getMacroTimeframe } from '../bot/trading-bot-engine';
+import { getMacroTimeframe, DITTO_SHORT_WHITELIST, isDittoWhitelisted } from '../bot/trading-bot-engine';
 
-export { roundPriceDynamic };
+export { roundPriceDynamic, DITTO_SHORT_WHITELIST, isDittoWhitelisted };
 
 export function evaluateTradingSignals(
   candles: Candle[],
@@ -491,6 +491,70 @@ export function evaluateTradingSignals(
   const ema200List = candles.length >= 200 ? calculateEMA(candles, 200) : [];
   const ema50Map = new Map(ema50List.map((e) => [e.time, e.value]));
   const ema200Map = new Map(ema200List.map((e) => [e.time, e.value]));
+
+  // 8. Ditto Hyperliquid Short 82% WR (Validado en Backtest de 14 días)
+  // Activos prioritarios (Whitelist): ['BTC-PERP', 'SOL-PERP', 'HYPE-PERP', 'XRP-PERP', 'DOGE-PERP'] (y sus equivalentes USDT, manteniendo XMR excluido)
+  // Disparador: En SHORT (SELL) cuando RSI(14) > 65 (o RSI(14) < 30 en Momentum Breakdown) a favor de la estructura bajista
+  // Take Profit 1 Exacto: +1.8% de distancia desde el precio de entrada (entryPrice * (1 - 0.018) en Short)
+  // Stop Loss con Holgura Anti-Barrida: 3.5% a 5.0% de distancia (entryPrice * (1 + 0.036) en Short) con apalancamiento 5x
+  const isDittoEligible = isDittoWhitelisted(symbol) && (activeStrategies.dittoVerifiedShort !== false);
+  if (isDittoEligible) {
+    const rsis = calculateRSI(candles, 14);
+    const rsiMap = new Map(rsis.map((r) => [r.time, r.value]));
+
+    for (let i = 14; i < candles.length; i++) {
+      const cCurrent = candles[i];
+      const cPrev = candles[i - 1];
+
+      const rCurr = rsiMap.get(cCurrent.time);
+      const rPrev = rsiMap.get(cPrev.time);
+      if (rCurr === undefined) continue;
+
+      const e50 = ema50Map.get(cCurrent.time);
+      const isBearishStructure = (e50 !== undefined ? cCurrent.close <= e50 : true) || cCurrent.close < cPrev.close;
+
+      // Disparador SHORT:
+      // A) Agotamiento en sobrecompra: RSI > 65 con giro o vela bajista
+      const isOverboughtExhaustion = rCurr >= 65 && (cCurrent.close <= cCurrent.open || (rPrev !== undefined && rCurr < rPrev));
+      // B) Quiebre de momentum bajista: RSI < 30 rompiendo soportes
+      const isMomentumBreakdown = rCurr <= 30 && cCurrent.close <= cPrev.low;
+
+      if ((isOverboughtExhaustion || isMomentumBreakdown) && isBearishStructure) {
+        // Evita duplicar señales inmediatas si ya se emitió una en los últimos 3 periodos
+        const prevSignal = signals[signals.length - 1];
+        const isTooRecent =
+          prevSignal &&
+          prevSignal.strategy === 'Ditto Hyperliquid Short 82% WR' &&
+          Number(cCurrent.time) - Number(prevSignal.time) < 180;
+
+        if (!isTooRecent) {
+          const entry = cCurrent.close;
+          const sl = roundPriceDynamic(entry * (1 + 0.036)); // Stop Loss anti-barrida: +3.6% con 5x
+          const tp1 = roundPriceDynamic(entry * (1 - 0.018)); // Take Profit 1 exacto: +1.8%
+          const tp2 = roundPriceDynamic(entry * (1 - 0.032)); // Take Profit 2 extendido: +3.2%
+          const reason = isOverboughtExhaustion
+            ? `Agotamiento en sobrecompra RSI (${rCurr.toFixed(1)} >= 65) a favor de estructura bajista`
+            : `Quiebre de momentum bajista RSI (${rCurr.toFixed(1)} <= 30) a favor de estructura bajista`;
+
+          signals.push({
+            id: `${symbol}-${timeframe}-ditto-short-${cCurrent.time}`,
+            symbol,
+            timeframe,
+            type: 'SELL',
+            time: cCurrent.time,
+            price: entry,
+            strategy: 'Ditto Hyperliquid Short 82% WR',
+            reason,
+            stopLoss: sl,
+            takeProfit1: tp1,
+            takeProfit2: tp2,
+            riskReward: '1:0.5 (Alta Probabilidad 82%-93% WR 5x)',
+            timestamp: Number(cCurrent.time) * 1000,
+          });
+        }
+      }
+    }
+  }
 
   // Helper para evaluar tendencia macro en la vela de la señal
   const evaluateMacroTrendAt = (c: Candle, prevC?: Candle): MacroTrend => {

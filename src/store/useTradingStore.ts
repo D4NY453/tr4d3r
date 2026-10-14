@@ -250,6 +250,7 @@ export const useTradingStore = create<TradingState>()(
         bollingerBreakout: true,
         bollingerSqueeze: true,
         bollingerPercentBDivergence: true,
+        dittoVerifiedShort: true,
       },
 
       signals: [],
@@ -1485,6 +1486,15 @@ export const useTradingStore = create<TradingState>()(
               maxDrawdownPercent: f.stats?.maxDrawdownPercent ?? 0,
             },
           }));
+        }
+
+        // Actualización transparente de Fondo #9 a Ditto Verified Short 82% WR
+        if (fundsToProcess[8]?.id === 'fund-9' && !fundsToProcess[8].name.includes('Ditto')) {
+          fundsToProcess[8] = {
+            ...fundsToProcess[8],
+            name: 'Fondo #9 - Ditto Verified Short (RSI 65 / TP 1.8% / SL 3.6%)',
+            strategy: 'Ditto Verified Short (RSI 65 / TP 1.8% / SL 3.6%)',
+          };
         }
 
         const result = processTickForSubFunds(

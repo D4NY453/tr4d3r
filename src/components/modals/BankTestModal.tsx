@@ -263,7 +263,14 @@ export const BankTestModal: React.FC = () => {
                               {idx + 1}
                             </span>
                             <div>
-                              <div className="text-white font-sans font-semibold text-xs">{fund.name}</div>
+                              <div className="text-white font-sans font-semibold text-xs flex items-center space-x-1.5">
+                                <span>{fund.name}</span>
+                                {fund.strategy.includes('Ditto') && (
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[9px] font-bold border border-emerald-500/30">
+                                    82%-93% WR
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[10px] text-[#787b86] font-sans">{fund.strategy}</span>
                             </div>
                           </div>

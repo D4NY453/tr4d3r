@@ -26,6 +26,40 @@ export interface BotDecisionResult {
 }
 
 /**
+ * Lista blanca de activos prioritarios validados en backtest de 14 días en Hyperliquid
+ * (BTC, SOL, HYPE, XRP, DOGE y equivalentes USDT).
+ * XMR queda estrictamente excluido por auditoría de riesgo.
+ */
+export const DITTO_SHORT_WHITELIST = [
+  'BTC-PERP',
+  'SOL-PERP',
+  'HYPE-PERP',
+  'XRP-PERP',
+  'DOGE-PERP',
+  'BTCUSDT',
+  'SOLUSDT',
+  'HYPEUSDT',
+  'XRPUSDT',
+  'DOGEUSDT',
+  'BTC',
+  'SOL',
+  'HYPE',
+  'XRP',
+  'DOGE',
+];
+
+export function isDittoWhitelisted(symbol: string): boolean {
+  if (!symbol) return false;
+  const upper = symbol.toUpperCase().trim();
+  if (upper.includes('XMR')) return false;
+  return DITTO_SHORT_WHITELIST.some((w) => {
+    const cleanW = w.replace(/(-PERP|USDT)$/i, '');
+    const cleanSym = upper.replace(/(-PERP|USDT|\/USD)$/i, '');
+    return upper === w || cleanSym === cleanW;
+  });
+}
+
+/**
  * Jerarquía de Tendencias Multitemporal (MTF):
  * 1. Gráfico Diario (1D): Solo se permiten operaciones si respeta la tendencia macro del Gráfico Semanal (1W).
  * 2. Gráfico de 4H / 1H: Solo se permiten operaciones si respeta la tendencia del Gráfico Diario (1D).
@@ -143,6 +177,19 @@ export function evaluateOpportunityForBot(
     }
   }
 
+  // Veto estricto por auditoría de riesgo: Exclusión total de XMR
+  if (signal.symbol.toUpperCase().includes('XMR')) {
+    return {
+      approved: false,
+      score: 0,
+      reason: `Veto de Auditoría: El activo ${signal.symbol} está en lista negra estricta (exclusión total de XMR)`,
+      orderType: botConfig.autoOrderType,
+      numericRR: 1.0,
+      macroTimeframe: macroTf,
+      macroConfirmed: false,
+    };
+  }
+
   // 1. Verificar si la estrategia está habilitada
   if (botConfig.enabledStrategies.length > 0 && !botConfig.enabledStrategies.includes(signal.strategy)) {
     return {
@@ -201,7 +248,10 @@ export function evaluateOpportunityForBot(
 
   // 4. Evaluar Ratio Riesgo/Beneficio
   const numericRR = parseRiskRewardRatio(signal.riskReward);
-  if (numericRR < botConfig.minRiskReward) {
+  // La estrategia validada 'Ditto Hyperliquid Short 82% WR' opera con alta probabilidad comprobada (82%-93% WR)
+  // con TP +1.8% y SL +3.6% (R:R 0.5), por lo que se exime del filtro restrictivo de R:R > 1.5
+  const isDittoStrategy = signal.strategy === 'Ditto Hyperliquid Short 82% WR';
+  if (!isDittoStrategy && numericRR < botConfig.minRiskReward) {
     return {
       approved: false,
       score: 45,
@@ -214,6 +264,11 @@ export function evaluateOpportunityForBot(
   // 5. Calcular Score de Confluencia Técnica (0 - 100)
   let score = 65; // Base de confianza inicial
 
+  // Bonificación especial por alta probabilidad validada en Hyperliquid (82%-93% Win Rate)
+  if (isDittoStrategy) {
+    score += 25;
+  }
+
   // Bonificación por R:R excelente
   if (numericRR >= 2.0) score += 15;
   else if (numericRR >= 1.5) score += 10;
@@ -222,9 +277,9 @@ export function evaluateOpportunityForBot(
   const tpDistPct = Math.abs(signal.takeProfit1 - signal.price) / signal.price;
   if (tpDistPct >= 0.008) score += 10; // > 0.8%
 
-  // Bonificación por Stop Loss razonable (< 2.5% para evitar sobre-riesgo)
+  // Bonificación por Stop Loss razonable (< 2.5% para evitar sobre-riesgo, o hasta 3.8% para Ditto Short)
   const slDistPct = Math.abs(signal.price - signal.stopLoss) / signal.price;
-  if (slDistPct > 0.003 && slDistPct < 0.025) score += 10;
+  if (slDistPct > 0.003 && (slDistPct < 0.025 || (isDittoStrategy && slDistPct <= 0.040))) score += 10;
 
   // 6. Verificar si cumple el puntaje mínimo de confianza
   if (score < botConfig.minConfidenceScore) {
@@ -570,12 +625,12 @@ export function createInitialSubFunds(): SubFund[] {
     },
     {
       id: 'fund-9',
-      name: 'Fondo #9 - RSI + Stoch Confluence (5s / 1m)',
+      name: 'Fondo #9 - Ditto Verified Short (RSI 65 / TP 1.8% / SL 3.6%)',
       initialCapital: 10000,
       currentCapital: 10000,
       executionTimeframe: '5s',
       confirmTimeframe: '1m',
-      strategy: 'RSI + Stochastic Confluence',
+      strategy: 'Ditto Verified Short (RSI 65 / TP 1.8% / SL 3.6%)',
       feeRate: 0,
       activePosition: null,
       closedTrades: [],
@@ -721,7 +776,42 @@ export function evaluateMicroStrategy(
     }
   }
 
-  // 5. RSI + Stochastic Confluence
+  // 5. Ditto Verified Short (RSI 65 / TP 1.8% / SL 3.6%) - Backtest Validado en Hyperliquid (82%-93% Win Rate)
+  if (strategyName.includes('Ditto')) {
+    let gains = 0;
+    let losses = 0;
+    for (let i = 1; i < n; i++) {
+      const diff = closes[i] - closes[i - 1];
+      if (diff > 0) gains += diff;
+      else losses += Math.abs(diff);
+    }
+    const rsi = gains === 0 && losses === 0
+      ? 50
+      : losses === 0
+      ? 100
+      : 100 - 100 / (1 + gains / losses);
+
+    const isBearishStructure = macroTrend1m === 'BEARISH' || cLast <= smaSlow || cLast <= cPrev;
+
+    // Disparador SHORT: RSI(14) > 65 (o RSI(14) < 30 en Momentum Breakdown) a favor de la estructura bajista
+    const isOverboughtExhaustion = rsi >= 65 && cLast <= cPrev;
+    const isMomentumBreakdown = rsi <= 30 && cLast < cPrev;
+
+    if ((isOverboughtExhaustion || isMomentumBreakdown) && isBearishStructure) {
+      return {
+        action: 'SELL',
+        reason: isOverboughtExhaustion
+          ? `Ditto Short: Agotamiento en sobrecompra RSI (${rsi.toFixed(1)} >= 65) a favor de estructura bajista`
+          : `Ditto Short: Quiebre de momentum bajista RSI (${rsi.toFixed(1)} <= 30) a favor de estructura bajista`,
+        stopLoss: roundPriceDynamic(currentPrice * (1 + 0.036)), // +3.6% en Short (holgura anti-barrida 5x)
+        takeProfit1: roundPriceDynamic(currentPrice * (1 - 0.018)), // +1.8% exacto en Short
+        takeProfit2: roundPriceDynamic(currentPrice * (1 - 0.032)), // +3.2% objetivo extendido
+      };
+    }
+    return { action: 'HOLD', reason: 'Ditto Short: Esperando condición RSI > 65 o < 30 bajista', stopLoss: 0, takeProfit1: 0, takeProfit2: 0 };
+  }
+
+  // 6. RSI + Stochastic Confluence
   if (strategyName.includes('RSI')) {
     let gains = 0;
     let losses = 0;
@@ -944,11 +1034,19 @@ export function processTickForSubFunds(
         }
       }
 
+      // Regla de Whitelist para Fondo #9 (Ditto Verified Short):
+      // Opera exclusivamente con la lista blanca ['BTC', 'SOL', 'HYPE', 'XRP', 'DOGE'] y excluye XMR
+      if (f.strategy.includes('Ditto') && !isDittoWhitelisted(symbol)) {
+        return f;
+      }
+
       // Regla Bidireccional:
       // - Si confirmación es BULLISH: Habilita LONG (BUY), bloquea SHORT.
       // - Si confirmación es BEARISH: Habilita SHORT (SELL), bloquea LONG.
-      const isLongAllowed = macroTrend === 'BULLISH';
-      const isShortAllowed = macroTrend === 'BEARISH';
+      // - Para Fondo #9 (Ditto Verified Short): Opera exclusivamente en SHORT a favor de la estructura bajista.
+      const isDittoFund = f.strategy.includes('Ditto');
+      const isLongAllowed = isDittoFund ? false : macroTrend === 'BULLISH';
+      const isShortAllowed = isDittoFund ? (macroTrend !== 'BULLISH') : macroTrend === 'BEARISH';
 
       if (isLongAllowed && strategyEval.action === 'BUY') {
         const tradeAmount = 1000; // Asignación de $1,000 USD por trade (10% del fondo)
@@ -969,6 +1067,7 @@ export function processTickForSubFunds(
           entryTime: timestamp,
           orderType: 'MARKET',
           isTP1Hit: false,
+          leverage: 1,
         };
       } else if (isShortAllowed && strategyEval.action === 'SELL') {
         const tradeAmount = 1000;
@@ -989,6 +1088,7 @@ export function processTickForSubFunds(
           entryTime: timestamp,
           orderType: 'MARKET',
           isTP1Hit: false,
+          leverage: isDittoFund ? 5 : 1, // Apalancamiento 5x con holgura anti-barrida
         };
       }
     }

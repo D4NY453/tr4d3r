@@ -67,6 +67,7 @@ export interface ActiveStrategyConfig {
   bollingerBreakout: boolean;
   bollingerSqueeze: boolean;
   bollingerPercentBDivergence: boolean;
+  dittoVerifiedShort?: boolean;
 }
 
 export type AssetCategory = 'ALL' | 'CRYPTO' | 'METALS' | 'FOREX' | 'INDICES' | 'HYPERLIQUID';
@@ -114,6 +115,7 @@ export interface PaperPosition {
   isTP1Hit?: boolean;
   macroTrend?: MacroTrend;
   macroTimeframe?: Timeframe;
+  leverage?: number;
 }
 
 export interface LimitOrder {

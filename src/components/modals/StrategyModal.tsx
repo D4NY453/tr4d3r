@@ -184,6 +184,30 @@ export const StrategyModal: React.FC = () => {
             />
           </div>
 
+          {/* Strategy 8: Ditto Hyperliquid Short 82% WR */}
+          <div className="p-4 bg-[#131722] rounded-lg border border-[#089981]/40 hover:border-[#089981]/70 transition-all flex items-start justify-between">
+            <div className="space-y-1 pr-4">
+              <div className="text-sm font-semibold text-[#d1d4dc] flex items-center space-x-2">
+                <span>Ditto Hyperliquid Short 82% WR</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#089981]/20 text-[#089981] font-mono font-bold">
+                  82%-93% WR Validado
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#f6c344]/20 text-[#f6c344] font-mono">
+                  BTC, SOL, HYPE, XRP, DOGE
+                </span>
+              </div>
+              <p className="text-xs text-[#787b86]">
+                Estrategia cuantitativa validada en Hyperliquid (14 días). Entradas en SHORT cuando RSI(14) &gt; 65 (agotamiento) o &lt; 30 (quiebre momentum) a favor de estructura bajista. TP1 exacto: +1.8%, SL anti-barrida: 3.6% (5x). XMR estrictamente excluido.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={Boolean(strategies?.dittoVerifiedShort !== false)}
+              onChange={() => toggleStrategy('dittoVerifiedShort')}
+              className="mt-1 rounded border-[#2a2e39] text-[#089981] focus:ring-0 w-4 h-4 cursor-pointer"
+            />
+          </div>
+
           <div className="p-3 bg-[#131722]/60 rounded border border-[#2a2e39]/60 flex items-start space-x-2">
             <ShieldAlert className="w-4 h-4 text-[#787b86] shrink-0 mt-0.5" />
             <p className="text-[11px] text-[#787b86]">

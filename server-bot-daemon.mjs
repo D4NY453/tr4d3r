@@ -24,16 +24,16 @@ const DEFAULT_CONFIG = {
   maxConcurrentTrades: 5, // Límite de trades simultáneos (configurable de 1 a 10)
   minRiskReward: 1.6, // Mínimo 1:1.6 de relación Riesgo/Beneficio
   allowedSymbols: [], // Empty = TOP Volumen Perps & Memes
-  timeframe: '1m', // Velas de 1m por defecto para alta frecuencia / scalping
-  scanIntervalSeconds: 6, // Escaneo cada 6 segundos
-  minSignalScore: 55, // Convicción mínima para generar órdenes (55/100)
-  tp1Percent: 0.016, // +1.6% movimiento (+16% ROE = +$1.60 USD bruto, ~+$1.50 neto)
-  tp2Percent: 0.026, // +2.6% movimiento (+26% ROE = +$2.60 USD bruto, ~+$2.50 neto)
+  timeframe: '5m', // Velas de 5m
+  scanIntervalSeconds: 10, // Escaneo cada 10 segundos
+  minSignalScore: 60, // Convicción mínima (60/100)
+  tp1Percent: 0.018, // +1.8% movimiento (+18% ROE = +$1.80 USD bruto)
+  tp2Percent: 0.028, // +2.8% movimiento (+28% ROE = +$2.80 USD bruto)
   slPercent: 0.009, // -0.9% movimiento (-9% ROE = -$0.90 USD max pérdida)
   instantProfitTake: true, // Proteger y cerrar si alcanza el objetivo neto
-  minInstantProfitUSD: 1.50, // MÍNIMO +$1.50 USD NETOS (NUNCA micro-centavos)
+  minInstantProfitUSD: 2.25, // AUDITORÍA DITTO: Mínimo +$2.25 USD netos (aplaza comisiones de $0.09)
   maxDrawdownPercent: 0.08, // 8% drawdown límite de seguridad (Circuit Breaker Kill-Switch)
-  longOnly: false, // Permitir compras y ventas para mayor rotación de órdenes
+  longOnly: false, // AUDITORÍA DITTO: Cortos tienen 78% winrate vs 0% en largos durante caídas
   requireMacroTrendConfirmation: true, // JERARQUÍA MTF: solo operar si el timeframe macro confirma
 };
 
@@ -929,7 +929,7 @@ export class ServerBotDaemon {
         // REGLA: TOMA DE GANANCIAS REALES (Mínimo +$1.50 a +$2.50 USD Netos)
         // NUNCA cierra por céntimos. Solo ejecuta salida si la ganancia cubre comisiones y deja +$1.50+ netos
         // -------------------------------------------------------------
-        const minNetProfitTarget = Math.max(1.50, this.config.minInstantProfitUSD ?? 1.50);
+        const minNetProfitTarget = Math.max(1.80, this.config.minInstantProfitUSD ?? 2.25);
         if (isInstantProfitEnabled && upnl >= minNetProfitTarget) {
           this.closingCoins.add(coin);
           this.addLog(
@@ -1459,6 +1459,9 @@ export class ServerBotDaemon {
       for (const coin of targetCoins) {
         if (this.state.positions.length >= maxPositions) break;
 
+        // AUDITORÍA DITTO MEJORA #4: Excluir activos tóxicos (XMR dio pérdidas netas y no aporta edge)
+        if (coin === 'XMR' || coin.startsWith('XMR')) continue;
+
         // Skip if already in position for this coin
         const alreadyInPosition =
           hlPositions.some((p) => p.coin === coin) ||
@@ -1541,6 +1544,10 @@ export class ServerBotDaemon {
         const dayVol = parseFloat(assetCtx.dayNtlVlm || '0');
         const markPx = parseFloat(assetCtx.markPx || assetCtx.midPx || lastClose);
         if (markPx <= 0) continue;
+
+        // AUDITORÍA DITTO MEJORA #2: Cálculo exacto de variación 24h
+        const prevDayPx = parseFloat(assetCtx.prevDayPx || '0');
+        const change24hPct = prevDayPx > 0 ? ((markPx - prevDayPx) / prevDayPx) * 100 : 0;
 
         let spreadPct = 0.02;
         if (Array.isArray(assetCtx.impactPxs) && assetCtx.impactPxs.length >= 2) {
@@ -1666,10 +1673,20 @@ export class ServerBotDaemon {
           sellScore = 0; // VETO: Sobreventa severa, alta probabilidad de rebote
         }
 
-        // MODO SOLO COMPRAS (LONG ONLY): Según auditoría Ditto, los cortos tienen 17% winrate.
-        const isLongOnly = this.config.longOnly !== false;
+        // -------------------------------------------------------------
+        // AUDITORÍA DITTO MEJORA #2: Cuando el activo cae en 24h, VETAR LARGOS
+        // Ditto auditoría: 0 de 3 en largos (-$3.52, 17% histórico) vs 7 de 9 en cortos (+77.7% winrate, +$3.53)
+        // -------------------------------------------------------------
+        if (change24hPct < 0) {
+          buyScore = 0; // Prohibir compras si el activo viene cayendo en 24h
+        }
+        if (change24hPct > 2.0) {
+          sellScore = 0; // Prohibir ventas en corto si el activo sube fuertemente (> +2.0%)
+        }
+
+        const isLongOnly = this.config.longOnly === true;
         if (isLongOnly) {
-          sellScore = 0; // Vetar 100% las entradas en corto/venta
+          sellScore = 0; // Solo vetar cortos si el usuario activó explícitamente MODO SOLO COMPRAS
         }
 
         let signalType = null;

@@ -921,9 +921,13 @@ export function processTickForSubFunds(
           ? (price - pos.entryPrice) / pos.entryPrice
           : (pos.entryPrice - price) / pos.entryPrice;
 
+        const livePnlUSDT = Number((pos.amountUSDT * currentRawMovePct).toFixed(4));
+        const livePnlPercent = Number((currentRawMovePct * 100).toFixed(2));
+
         pos.currentPrice = price;
-        pos.pnlUSDT = Number((pos.amountUSDT * currentRawMovePct).toFixed(4));
-        pos.pnlPercent = Number((currentRawMovePct * 100).toFixed(2));
+        pos.pnlUSDT = livePnlUSDT;
+        pos.pnlPercent = livePnlPercent;
+        f.activePosition = { ...pos };
       }
     }
     // 4. Si NO tiene posición activa: Evaluar Entrada Bidireccional con Filtro Grok Anti-Chop y Confirmación MTF

@@ -330,8 +330,10 @@ export async function executeHyperliquidOrder(params: {
     }
 
     const universeItem = meta.universe[assetIndex];
-    const szDecimals = universeItem.szDecimals ?? 4;
-    const formattedSz = Number(sz.toFixed(szDecimals));
+    const szDecimals = typeof universeItem.szDecimals === 'number' ? universeItem.szDecimals : 4;
+    const factor = Math.pow(10, szDecimals);
+    const formattedSz = Math.round(sz * factor) / factor;
+    const formattedSzStr = szDecimals === 0 ? Math.round(formattedSz).toString() : formattedSz.toFixed(szDecimals);
 
     if (formattedSz <= 0) {
       return { status: 'err', error: `Tamaño de orden demasiado pequeño para ${cleanCoin} (min decimals: ${szDecimals})` };
@@ -382,7 +384,7 @@ export async function executeHyperliquidOrder(params: {
           a: assetIndex,
           b: isBuy,
           p: formattedPriceStr,
-          s: formattedSz.toString(),
+          s: formattedSzStr,
           r: reduceOnly,
           t: {
             limit: {

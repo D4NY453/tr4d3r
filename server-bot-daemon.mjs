@@ -8,36 +8,42 @@ import {
 } from '@nktkas/hyperliquid';
 import { privateKeyToAccount } from 'viem/accounts';
 import { TradeJournalDB } from './trade-journal-db.mjs';
+import { clampRiskConfig, positionSize, RiskGuard, getDataDir } from './lib/risk-manager.mjs';
+import { executeLimitOrderHyperliquid, executeDittoOrder, getBestBidAsk, formatHyperliquidPrice, formatHyperliquidSize } from './lib/order-execution.mjs';
+import { detectPatternSignal } from './lib/patterns-bridge.mjs';
+import { getAgentKey } from './lib/env.cjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const CONFIG_PATH = path.join(__dirname, 'bot-config.json');
-const STATE_PATH = path.join(__dirname, 'bot-state.json');
+const CONFIG_PATH = path.join(getDataDir(), 'bot-config.json');
+const STATE_PATH = path.join(getDataDir(), 'bot-state.json');
 
-const DEFAULT_CONFIG = {
+const DEFAULT_CONFIG = clampRiskConfig({
   isActive: false,
   walletAddress: '',
   agentPrivateKey: '',
-  capitalPerTrade: 10, // $10 capital (con 10x apalancamiento = $100 nocional)
-  leverage: 10,
-  maxConcurrentTrades: 5, // Límite de trades simultáneos (configurable de 1 a 10)
-  minRiskReward: 1.6, // Mínimo 1:1.6 de relación Riesgo/Beneficio
-  allowedSymbols: [], // Empty = TOP Volumen Perps & Memes
-  timeframe: '5m', // Velas de 5m
-  scanIntervalSeconds: 10, // Escaneo cada 10 segundos
-  minSignalScore: 60, // Convicción mínima (60/100)
-  tp1Percent: 0.018, // +1.8% movimiento (+18% ROE = +$1.80 USD bruto)
-  tp2Percent: 0.028, // +2.8% movimiento (+28% ROE = +$2.80 USD bruto)
-  slPercent: 0.009, // -0.9% movimiento (-9% ROE = -$0.90 USD max pérdida)
-  instantProfitTake: true, // Proteger y cerrar si alcanza el objetivo neto
-  minInstantProfitUSD: 2.25, // AUDITORÍA DITTO: Mínimo +$2.25 USD netos (aplaza comisiones de $0.09)
-  maxDrawdownPercent: 0.08, // 8% drawdown límite de seguridad (Circuit Breaker Kill-Switch)
-  longOnly: false, // AUDITORÍA DITTO: Cortos tienen 78% winrate vs 0% en largos durante caídas
-  requireMacroTrendConfirmation: true, // JERARQUÍA MTF: solo operar si el timeframe macro confirma
-};
-
-const MEME_REGEX = /PEPE|DOGE|SHIB|BONK|WIF|POPCAT|FART|TRUMP|PENGU|MOODENG|GOAT|BRETT|PURR|MELANIA|CHILL|PNUT|ACT|BOME|MEME|CAT|NEIRO|MOG|GIGA|SPX/i;
+  capitalPerTrade: 10,
+  leverage: 1,
+  maxConcurrentTrades: 1,
+  riskPerTradePct: 0.005,
+  dailyLossCapPct: 0.03,
+  maxConsecutiveLosses: 3,
+  minRiskReward: 1.6,
+  allowedSymbols: ['BTC', 'ETH'],
+  timeframe: '1h',
+  scanIntervalSeconds: 60,
+  minSignalScore: 60,
+  atrStopMult: 1.5,
+  atrTargetMult: 3.0,
+  fallbackStopPct: 0.02,
+  instantProfitTake: false,
+  minInstantProfitUSD: 2.25,
+  maxDrawdownPercent: 0.08,
+  longOnly: false,
+  requireMacroTrendConfirmation: true,
+  usePatternSignals: false,
+});
 
 /**
  * Jerarquía de Tendencias Multitemporal (MTF):
@@ -129,23 +135,6 @@ function calculateATR(highs, lows, closes, period = 14) {
   return result;
 }
 
-function calculateBollingerBands(closes, period = 20, multiplier = 2) {
-  if (closes.length < period) return [];
-  const result = [];
-  for (let i = period - 1; i < closes.length; i++) {
-    const slice = closes.slice(i - period + 1, i + 1);
-    const mean = slice.reduce((a, b) => a + b, 0) / period;
-    const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
-    const stdDev = Math.sqrt(variance);
-    result.push({
-      upper: mean + stdDev * multiplier,
-      middle: mean,
-      lower: mean - stdDev * multiplier,
-    });
-  }
-  return result;
-}
-
 // Oscilador Estocástico (%K, %D)
 function calculateStochastic(highs, lows, closes, periodK = 14, smoothK = 3, periodD = 3) {
   if (closes.length < periodK) {
@@ -196,6 +185,7 @@ function calculateStochastic(highs, lows, closes, periodK = 14, smoothK = 3, per
 
 export class ServerBotDaemon {
   constructor() {
+    this.riskGuard = new RiskGuard(path.join(getDataDir(), 'bot-risk-state.json'));
     this.config = this.loadConfig();
     this.state = this.loadState();
     this.transport = new HttpTransport({ timeout: 25000 });
@@ -209,10 +199,9 @@ export class ServerBotDaemon {
     this.closingCoins = new Set();
     this.macroTrendCache = new Map(); // Cache en memoria TTL 60s para evitar 429 en llamadas macro
 
-    this.addLog('SYSTEM', '🚀 Servidor Scalper 24/7 inicializado (Perps, Memes y Predictions en 1m a 5m con Cierre Inmediato en Verde cada 1.5s).');
-    this.reconstructTradesFromLogs();
+    this.addLog('SYSTEM', '🚀 Servidor institucional con gestión de riesgo (BTC/ETH 1x) inicializado.');
 
-    // Fase 1: Inicializar Diario de Trading SQLite con WAL mode y migrar trades existentes
+    // Inicializar Diario de Trading SQLite con WAL mode y migrar trades existentes
     try {
       this.journalDb = new TradeJournalDB();
       this.journalDb.migrateFromStateFile(STATE_PATH);
@@ -231,63 +220,51 @@ export class ServerBotDaemon {
 
   loadConfig() {
     try {
+      let parsed = {};
       if (fs.existsSync(CONFIG_PATH)) {
         const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
-        const parsed = JSON.parse(raw);
-        // Enforce 5m timeframe for high-conviction signals
-        parsed.timeframe = '5m';
-        parsed.scanIntervalSeconds = 12;
-        parsed.capitalPerTrade = 10;
-        parsed.maxConcurrentTrades = parsed.maxConcurrentTrades ? Math.max(1, Math.min(10, Number(parsed.maxConcurrentTrades))) : 5;
-        parsed.minRiskReward = 1.6;
-        parsed.tp1Percent = 0.016;
-        parsed.tp2Percent = 0.026;
-        parsed.slPercent = 0.009;
-        parsed.minInstantProfitUSD = Math.max(1.50, parsed.minInstantProfitUSD || 1.50);
-        parsed.maxDrawdownPercent = parsed.maxDrawdownPercent ? Number(parsed.maxDrawdownPercent) : 0.08;
-        parsed.longOnly = parsed.longOnly !== undefined ? Boolean(parsed.longOnly) : true;
-        parsed.requireMacroTrendConfirmation = parsed.requireMacroTrendConfirmation !== false;
-        // Set allowedSymbols to [] if it was restricted to the 4 coins
-        if (
-          Array.isArray(parsed.allowedSymbols) &&
-          parsed.allowedSymbols.length === 4 &&
-          parsed.allowedSymbols.includes('BTC-PERP') &&
-          parsed.allowedSymbols.includes('HYPE-PERP')
-        ) {
-          parsed.allowedSymbols = [];
+        try { parsed = JSON.parse(raw) || {}; } catch {}
+        // Si el archivo viejo contenía agentPrivateKey, se elimina del disco
+        if (parsed.agentPrivateKey) {
+          delete parsed.agentPrivateKey;
+          try {
+            fs.writeFileSync(CONFIG_PATH, JSON.stringify(parsed, null, 2), 'utf8');
+          } catch {}
         }
-        return { ...DEFAULT_CONFIG, ...parsed };
       }
+      parsed.agentPrivateKey = getAgentKey();
+      parsed.walletAddress = (process.env.WALLET_ADDRESS || parsed.walletAddress || '').trim();
+      return clampRiskConfig({ ...DEFAULT_CONFIG, ...parsed });
     } catch (e) {
       console.warn('Error reading bot config:', e);
     }
-    return { ...DEFAULT_CONFIG };
+    return clampRiskConfig({ ...DEFAULT_CONFIG, agentPrivateKey: getAgentKey(), walletAddress: (process.env.WALLET_ADDRESS || '').trim() });
   }
 
   saveConfig(newConfig) {
-    if (newConfig.agentPrivateKey) {
-      let k = newConfig.agentPrivateKey.trim().replace(/^['"]|['"]$/g, '');
-      if (k && !k.startsWith('0x') && /^[0-9a-fA-F]{64}$/.test(k)) {
-        k = '0x' + k;
-      }
-      newConfig.agentPrivateKey = k;
-      try {
-        const acc = privateKeyToAccount(k);
-        if (!newConfig.walletAddress && !this.config.walletAddress) {
-          newConfig.walletAddress = acc.address;
-        }
-      } catch (e) {}
-    }
-    if (newConfig.walletAddress) {
-      let w = newConfig.walletAddress.trim().replace(/^['"]|['"]$/g, '');
+    const configToPersist = { ...newConfig };
+    // Seguridad: bot-config.json NUNCA guarda la clave privada
+    delete configToPersist.agentPrivateKey;
+
+    if (configToPersist.walletAddress) {
+      let w = configToPersist.walletAddress.trim().replace(/^['"]|['"]$/g, '');
       if (w && !w.startsWith('0x') && /^[0-9a-fA-F]{40}$/.test(w)) {
         w = '0x' + w;
       }
-      newConfig.walletAddress = w;
+      configToPersist.walletAddress = w;
     }
-    this.config = { ...this.config, ...newConfig };
+
+    const merged = { ...this.config, ...configToPersist };
+    this.config = clampRiskConfig({
+      ...merged,
+      agentPrivateKey: getAgentKey(),
+      walletAddress: (process.env.WALLET_ADDRESS || merged.walletAddress || '').trim(),
+    });
+
     try {
-      fs.writeFileSync(CONFIG_PATH, JSON.stringify(this.config, null, 2), 'utf8');
+      const diskData = { ...this.config };
+      delete diskData.agentPrivateKey;
+      fs.writeFileSync(CONFIG_PATH, JSON.stringify(diskData, null, 2), 'utf8');
     } catch (e) {
       console.error('Error saving bot config:', e);
     }
@@ -358,6 +335,11 @@ export class ServerBotDaemon {
     this.state.closedTrades = [fullTrade, ...this.state.closedTrades].slice(0, 300);
     this.saveState();
 
+    // Actualizar límites y pérdidas en RiskGuard
+    if (this.riskGuard) {
+      this.riskGuard.recordTrade(trade.pnlUSD || 0);
+    }
+
     // Guardar en la base de datos persistente SQLite con telemetría completa
     if (this.journalDb) {
       try {
@@ -418,103 +400,6 @@ export class ServerBotDaemon {
       console.warn('[ServerBotDaemon] Fallo al sincronizar fills on-chain a SQLite:', err.message);
     }
     return 0;
-  }
-
-  reconstructTradesFromLogs() {
-    if (Array.isArray(this.state.closedTrades) && this.state.closedTrades.length > 0) {
-      return;
-    }
-    const reconstructed = [];
-    const logs = this.state.logs || [];
-
-    for (const l of logs) {
-      if (l.type === 'TP1_HIT') {
-        const m = l.message.match(/\[TAKE PROFIT 1 SCALP\] (\w+) alcanzó \$([0-9.]+).*?TP1: \$([0-9.]+).*?Break-Even \(\$([0-9.]+)\)/i);
-        if (m) {
-          const coin = m[1];
-          const exitPrice = parseFloat(m[2]);
-          const entryPrice = parseFloat(m[4]);
-          const pnlPct = entryPrice > 0 ? ((Math.abs(exitPrice - entryPrice) / entryPrice) * (this.config.leverage || 10) * 100) : 1.2;
-          const pnlUSD = ((this.config.capitalPerTrade || 10) * 0.5 * pnlPct) / 100;
-          reconstructed.push({
-            id: `rec-${l.timestamp}-${coin}-tp1`,
-            coin,
-            symbol: `${coin}-PERP`,
-            side: 'BUY',
-            entryPrice,
-            exitPrice,
-            size: 1,
-            notionalUSD: (this.config.capitalPerTrade || 10) * (this.config.leverage || 10),
-            pnlUSD: Number(pnlUSD.toFixed(4)),
-            pnlPercent: Number(pnlPct.toFixed(2)),
-            exitReason: '🎯 TP1 TOCADO (50% asegurado)',
-            entryTime: l.timestamp - 35000,
-            exitTime: l.timestamp,
-            durationSeconds: 35,
-            isWin: true,
-            executionVenue: this.isDittoKey() ? 'DITTO_NETWORK' : 'HYPERLIQUID',
-          });
-        }
-      } else if (l.type === 'TP2_HIT') {
-        const m = l.message.match(/\[TAKE PROFIT 2 SCALP\] (\w+) alcanzó \$([0-9.]+).*?TP2: \$([0-9.]+)/i);
-        if (m) {
-          const coin = m[1];
-          const exitPrice = parseFloat(m[2]);
-          const pnlPct = 2.5 * (this.config.leverage || 10);
-          const pnlUSD = ((this.config.capitalPerTrade || 10) * pnlPct) / 100;
-          reconstructed.push({
-            id: `rec-${l.timestamp}-${coin}-tp2`,
-            coin,
-            symbol: `${coin}-PERP`,
-            side: 'BUY',
-            entryPrice: exitPrice * 0.995,
-            exitPrice,
-            size: 1,
-            notionalUSD: (this.config.capitalPerTrade || 10) * (this.config.leverage || 10),
-            pnlUSD: Number(pnlUSD.toFixed(4)),
-            pnlPercent: Number(pnlPct.toFixed(2)),
-            exitReason: '🚀 TP2 TOCADO (100% Ganancia)',
-            entryTime: l.timestamp - 50000,
-            exitTime: l.timestamp,
-            durationSeconds: 50,
-            isWin: true,
-            executionVenue: this.isDittoKey() ? 'DITTO_NETWORK' : 'HYPERLIQUID',
-          });
-        }
-      } else if (l.type === 'SL_HIT') {
-        const m = l.message.match(/\[STOP LOSS SCALP\] (\w+) alcanzó \$([0-9.]+).*?SL: \$([0-9.]+)/i);
-        if (m) {
-          const coin = m[1];
-          const exitPrice = parseFloat(m[2]);
-          const slPrice = parseFloat(m[3]);
-          const pnlPct = -1.0 * (this.config.leverage || 10);
-          const pnlUSD = ((this.config.capitalPerTrade || 10) * pnlPct) / 100;
-          reconstructed.push({
-            id: `rec-${l.timestamp}-${coin}-sl`,
-            coin,
-            symbol: `${coin}-PERP`,
-            side: 'BUY',
-            entryPrice: slPrice * 1.005,
-            exitPrice,
-            size: 1,
-            notionalUSD: (this.config.capitalPerTrade || 10) * (this.config.leverage || 10),
-            pnlUSD: Number(pnlUSD.toFixed(4)),
-            pnlPercent: Number(pnlPct.toFixed(2)),
-            exitReason: '🛑 STOP LOSS (Corte rápido)',
-            entryTime: l.timestamp - 25000,
-            exitTime: l.timestamp,
-            durationSeconds: 25,
-            isWin: false,
-            executionVenue: this.isDittoKey() ? 'DITTO_NETWORK' : 'HYPERLIQUID',
-          });
-        }
-      }
-    }
-
-    if (reconstructed.length > 0) {
-      this.state.closedTrades = reconstructed;
-      this.saveState();
-    }
   }
 
   async getUserFills(walletAddress) {
@@ -696,32 +581,58 @@ export class ServerBotDaemon {
       console.warn('Error fetching balance baseline for circuit breaker:', e.message);
     }
 
-    if (this.loopTimer) clearInterval(this.loopTimer);
+    if (this.loopTimer) clearTimeout(this.loopTimer);
     if (this.fastMonitorTimer) clearInterval(this.fastMonitorTimer);
 
-    const intervalMs = Math.max(4, this.config.scanIntervalSeconds || 12) * 1000;
-    this.loopTimer = setInterval(() => this.runCycle(), intervalMs);
-
-    // Bucle ultra-rápido de supervisión y toma de ganancias cada 1.5s
+    // Bucle ultra-rápido de supervisión de posiciones cada 1.5s
     this.fastMonitorTimer = setInterval(() => this.runFastPositionMonitor(), 1500);
 
-    const minP = this.config.minInstantProfitUSD ?? 1.50;
-    const scope = !this.config.allowedSymbols || this.config.allowedSymbols.length === 0 || this.config.allowedSymbols.includes('ALL')
-      ? 'TODOS los Perps y Memes'
-      : this.config.allowedSymbols.join(', ');
-    const modeStr = this.config.longOnly !== false ? ' [MODO SOLO COMPRAS / LONG ONLY]' : '';
+    const symbols = (this.config.allowedSymbols || ['BTC', 'ETH']).join(', ');
     this.addLog(
       'STATUS',
-      `🟢 Bot 24/7 ACTIVADO${modeStr}. Escaneando ${scope} en velas de 5m cada ${intervalMs / 1000}s. Monitoreo cada 1.5s con objetivo +$${minP} USD netos y Circuit Breaker (-8% de balance).`
+      `🟢 Bot 24/7 ACTIVADO. Operando ${symbols} en timeframe ${this.config.timeframe} al cierre de vela (Apalancamiento 1x, Gestión ATR y Circuit Breaker -3% diario / -8% total).`
     );
     setTimeout(() => this.runFastPositionMonitor(), 500);
-    setTimeout(() => this.runCycle(), 1200);
+    setTimeout(async () => {
+      await this.runCycle();
+      this.scheduleNextCandleCycle();
+    }, 1200);
+  }
+
+  getMsUntilNextCandleClose(timeframe = '1h') {
+    const minutes = timeframe === '1h' ? 60 : timeframe === '15m' ? 15 : 5;
+    const intervalMs = minutes * 60 * 1000;
+    const now = Date.now();
+    const remainder = now % intervalMs;
+    const msLeft = intervalMs - remainder;
+    return msLeft + 3000; // 3 segundos tras el cierre para que la vela esté consolidada en el exchange
+  }
+
+  scheduleNextCandleCycle() {
+    if (!this.config.isActive) return;
+    if (this.loopTimer) clearTimeout(this.loopTimer);
+    const ms = this.getMsUntilNextCandleClose(this.config.timeframe);
+    this.loopTimer = setTimeout(async () => {
+      try {
+        await this.runCycle();
+      } catch (err) {
+        console.error('[ServerBotDaemon] Error en ciclo:', err.message);
+      } finally {
+        this.scheduleNextCandleCycle();
+      }
+    }, ms);
+  }
+
+  closedCandlesOnly(candles) {
+    if (!Array.isArray(candles) || candles.length === 0) return [];
+    // Descartar la última vela que sigue en formación
+    return candles.slice(0, -1);
   }
 
   stop() {
     this.saveConfig({ isActive: false });
     if (this.loopTimer) {
-      clearInterval(this.loopTimer);
+      clearTimeout(this.loopTimer);
       this.loopTimer = null;
     }
     if (this.fastMonitorTimer) {
@@ -890,9 +801,10 @@ export class ServerBotDaemon {
         // Auto-registro en memoria si la posición fue abierta externamente
         let tracked = this.state.positions.find((p) => p.coin === coin);
         if (!tracked) {
-          const slDistance = entryPx * 0.009; // 0.9% SL de protección
-          const tp1Distance = entryPx * 0.016; // +1.6% TP1 (+16% ROE = +$1.60 USD bruto, ~+$1.50 neto)
-          const tp2Distance = entryPx * 0.026; // +2.6% TP2 (+26% ROE = +$2.60 USD bruto, ~+$2.50 neto)
+          const fallbackStopPct = this.config.fallbackStopPct || 0.02; // 2% fallback para posiciones externas
+          const slDistance = entryPx * fallbackStopPct;
+          const tp1Distance = entryPx * fallbackStopPct;
+          const tp2Distance = entryPx * (fallbackStopPct * 2);
           tracked = {
             coin,
             side: isLong ? 'BUY' : 'SELL',
@@ -903,8 +815,8 @@ export class ServerBotDaemon {
             takeProfit2: isLong ? entryPx + tp2Distance : entryPx - tp2Distance,
             sz,
             initialSz: sz,
-            capitalUSD: this.config.capitalPerTrade,
-            leverage: pos.leverage?.value || this.config.leverage || 10,
+            capitalUSD: sz * entryPx,
+            leverage: pos.leverage?.value || this.config.leverage || 1,
             isTP1Hit: false,
             entryTime: Date.now() - 20000,
           };
@@ -1415,52 +1327,31 @@ export class ServerBotDaemon {
       }
 
       // 2. Scan for Technical Entry Signals if active positions < maxConcurrentTrades
-      const maxPositions = this.config.maxConcurrentTrades || 4;
+      const maxPositions = this.config.maxConcurrentTrades || 1;
       const currentPositionsCount = hlPositions.length > 0 ? hlPositions.length : this.state.positions.length;
       if (currentPositionsCount >= maxPositions) {
         return;
       }
 
-      // Build target coins list:
-      // If allowedSymbols is empty or has 'ALL', include top 35 volume perps + ALL meme coins!
-      let targetCoins = [];
-      const isAllAllowed =
-        !this.config.allowedSymbols ||
-        this.config.allowedSymbols.length === 0 ||
-        this.config.allowedSymbols.includes('ALL');
-
-      if (isAllAllowed) {
-        // Sort universe by 24h volume
-        const sortedByVol = meta.universe
-          .map((u, idx) => ({
-            name: u.name,
-            vol: parseFloat(assetCtxs[idx]?.dayNtlVlm || '0'),
-            isMeme: MEME_REGEX.test(u.name),
-          }))
-          .sort((a, b) => b.vol - a.vol);
-
-        // Take top 35 by volume
-        const topVolume = sortedByVol.slice(0, 35).map((c) => c.name);
-        // Add all meme coins (DOGE, PEPE, FARTCOIN, PUMP, TRUMP, PENGU, PURR, etc.)
-        const memes = sortedByVol.filter((c) => c.isMeme).map((c) => c.name);
-
-        targetCoins = Array.from(new Set([...topVolume, ...memes]));
-      } else {
-        targetCoins = this.config.allowedSymbols.map((s) =>
-          s.replace(/(-PERP|USDT|\/USD)$/i, '').toUpperCase()
-        );
+      // 0. Comprobar límites de riesgo institucional con RiskGuard
+      if (typeof currentNetWorth !== 'number' || currentNetWorth <= 0) {
+        this.addLog('RISK', '⚠️ [RIESGO] No se puede leer el capital de la cuenta. Operación omitida.');
+        return;
+      }
+      const riskCheck = this.riskGuard.canTrade(currentNetWorth);
+      if (!riskCheck.allowed) {
+        this.addLog('RISK', `🛑 [RIESGO BLOQUEADO] ${riskCheck.reason}`);
+        return;
       }
 
-      // Randomize or rotate coins slightly so all perps and memes get analyzed
-      targetCoins = targetCoins.sort(() => Math.random() - 0.5);
-
-      const targetTimeframe = '5m';
+      // Target coins = allowedSymbols filtrados estrictamente a BTC / ETH
+      const targetCoins = (this.config.allowedSymbols || ['BTC', 'ETH']).map((s) =>
+        s.replace(/(-PERP|USDT|\/USD)$/i, '').toUpperCase()
+      );
+      const targetTimeframe = this.config.timeframe || '1h';
 
       for (const coin of targetCoins) {
         if (this.state.positions.length >= maxPositions) break;
-
-        // AUDITORÍA DITTO MEJORA #4: Excluir activos tóxicos (XMR dio pérdidas netas y no aporta edge)
-        if (coin === 'XMR' || coin.startsWith('XMR')) continue;
 
         // Skip if already in position for this coin
         const alreadyInPosition =
@@ -1471,8 +1362,8 @@ export class ServerBotDaemon {
         const assetIndex = meta.universe.findIndex((u) => u.name === coin);
         if (assetIndex === -1) continue;
 
-        // Fetch recent candles (at least 70-100 candles)
-        const durationMinutes = targetTimeframe === '1m' ? 120 : targetTimeframe === '3m' ? 300 : 500;
+        // Fetch recent candles (~400 candles del timeframe configurado)
+        const durationMinutes = targetTimeframe === '1h' ? 400 * 60 : targetTimeframe === '15m' ? 400 * 15 : 400 * 5;
         let candlesRaw = [];
         try {
           candlesRaw = await this.infoClient.candleSnapshot({
@@ -1485,13 +1376,15 @@ export class ServerBotDaemon {
           continue;
         }
 
-        if (!Array.isArray(candlesRaw) || candlesRaw.length < 55) continue;
+        // Descarta la vela en formación para evitar repainting / lookahead
+        const closedCandles = this.closedCandlesOnly(candlesRaw);
+        if (!Array.isArray(closedCandles) || closedCandles.length < 55) continue;
 
-        const opens = candlesRaw.map((c) => parseFloat(c.o));
-        const closes = candlesRaw.map((c) => parseFloat(c.c));
-        const highs = candlesRaw.map((c) => parseFloat(c.h));
-        const lows = candlesRaw.map((c) => parseFloat(c.l));
-        const volumes = candlesRaw.map((c) => parseFloat(c.v));
+        const opens = closedCandles.map((c) => parseFloat(c.o));
+        const closes = closedCandles.map((c) => parseFloat(c.c));
+        const highs = closedCandles.map((c) => parseFloat(c.h));
+        const lows = closedCandles.map((c) => parseFloat(c.l));
+        const volumes = closedCandles.map((c) => parseFloat(c.v));
 
         // High-Conviction Indicators on 5m candles:
         const ema9Series = calculateEMA(closes, 9);
@@ -1727,33 +1620,29 @@ export class ServerBotDaemon {
           const isBuy = signalType === 'BUY';
           const entryPrice = markPx;
 
-          // Parámetros matemáticos para ganar el Torneo Ditto:
-          // Capital $10 con apalancamiento 10x = $100 nocional
-          // Comisiones Ditto round-trip: ~0.10% = $0.10 USD
-          // TP1: +1.6% movimiento (+16% ROE = +$1.60 USD bruto, ~+$1.50 neto)
-          // TP2: +2.6% movimiento (+26% ROE = +$2.60 USD bruto, ~+$2.50 neto)
-          // SL: -0.9% movimiento (-9% ROE = -$0.90 USD máx riesgo)
-          const tp1Pct = Math.max(0.016, this.config.tp1Percent || 0.016);
-          const tp2Pct = Math.max(0.026, this.config.tp2Percent || 0.026);
-          const slPct = Math.min(0.009, this.config.slPercent || 0.009);
+          const currentAtr = atr || (entryPrice * 0.015);
+          const atrStopMult = this.config.atrStopMult || 1.5;
+          const atrTargetMult = this.config.atrTargetMult || 3.0;
+          const stopDist = atrStopMult * currentAtr;
+          const targetDist = atrTargetMult * currentAtr;
 
-          const stopLoss = isBuy ? entryPrice * (1 - slPct) : entryPrice * (1 + slPct);
-          const takeProfit1 = isBuy ? entryPrice * (1 + tp1Pct) : entryPrice * (1 - tp1Pct);
-          const takeProfit2 = isBuy ? entryPrice * (1 + tp2Pct) : entryPrice * (1 - tp2Pct);
+          const stopLoss = isBuy ? entryPrice - stopDist : entryPrice + stopDist;
+          const takeProfit1 = isBuy ? entryPrice + stopDist : entryPrice - stopDist; // TP1 = 1R
+          const takeProfit2 = isBuy ? entryPrice + targetDist : entryPrice - targetDist; // TP2 = 3.0 ATR
 
           // Validar relación Riesgo/Beneficio (mínimo 1.6)
           const risk = Math.abs(entryPrice - stopLoss);
-          const reward = Math.abs(takeProfit1 - entryPrice);
-          const rr = reward / risk;
+          const reward = Math.abs(takeProfit2 - entryPrice);
+          const rr = risk > 0 ? reward / risk : 0;
 
           if (rr < (this.config.minRiskReward || 1.6)) {
             continue;
           }
 
-          // Calculate size
+          // Calculate size en base a gestión de riesgo institucional
           const universeItem = meta.universe[assetIndex];
           const szDecimals = universeItem.szDecimals ?? 4;
-          const targetLeverage = Math.min(this.config.leverage || 10, universeItem.maxLeverage || 20);
+          const targetLeverage = 1; // Apalancamiento 1x estricto
 
           // Update Leverage on Hyperliquid if using native exchange client
           if (exClient) {
@@ -1768,30 +1657,27 @@ export class ServerBotDaemon {
             }
           }
 
-          const notionalUSD = this.config.capitalPerTrade * targetLeverage;
-          const rawSz = notionalUSD / entryPrice;
-          const formattedSz = Number(rawSz.toFixed(szDecimals));
+          const calculatedSize = positionSize(currentNetWorth, entryPrice, stopLoss, this.config.riskPerTradePct || 0.005);
+          const formattedSz = formatHyperliquidSize(calculatedSize, szDecimals);
 
-          if (formattedSz <= 0) continue;
+          if (formattedSz <= 0) {
+            this.addLog('RISK', `⚠️ [OMITIDO] Nocional < $10 USD para ${coin} (${calculatedSize} calculado).`);
+            continue;
+          }
 
-          // Slippage target price for IOC market order
-          const slippage = 0.015; // 1.5%
-          const targetPx = isBuy ? entryPrice * (1 + slippage) : entryPrice * (1 - slippage);
-          const formattedPx = targetPx > 1000 ? targetPx.toFixed(1) : targetPx > 10 ? targetPx.toFixed(2) : targetPx.toFixed(4);
-
-          const isMemeTag = MEME_REGEX.test(coin) ? '🎭 [MEME]' : '⚡ [PERP]';
+          const notionalUSD = formattedSz * entryPrice;
 
           const entryTelemetry = {
             rsi14: Number(rsiCurr.toFixed(2)),
             stochK: Number(stochK.toFixed(2)),
             stochD: Number(stochD.toFixed(2)),
-            atr14: Number(atr.toFixed(5)),
+            atr14: Number(currentAtr.toFixed(5)),
             fundingRate: Number((fundingRateRaw * 100).toFixed(4)),
             spreadPct: Number(spreadPct.toFixed(4)),
             emaTrend: markPx >= ema50Curr ? 'BULLISH' : 'BEARISH',
             macroTf: macroInfo?.macroTf || getMacroTimeframe(targetTimeframe),
             macroTrend: macroInfo?.trend || 'BULLISH',
-            macroReason: macroInfo?.reason || 'Alineación alcista confirmada',
+            macroReason: macroInfo?.reason || 'Alineación confirmada',
             volume24hUSD: Number(dayVol.toFixed(2)),
             confluenceScore: signalScore,
             confluenceReasons: signalReason,
@@ -1799,24 +1685,34 @@ export class ServerBotDaemon {
 
           this.addLog(
             'SIGNAL',
-            `${isMemeTag} [CONVICCIÓN ${signalScore}/100 + MTF ✅ ${entryTelemetry.macroTf} ${entryTelemetry.macroTrend}] Señal ${signalType} en ${coin} @ $${entryPrice} (5m). RSI: ${entryTelemetry.rsi14}, Stoch: %K ${entryTelemetry.stochK} / %D ${entryTelemetry.stochD}. Confluencia: ${signalReason}. TP1: +1.6% (+$1.50 neto), TP2: +2.6% (+$2.50 neto), SL: -0.9%`
+            `⚡ [CONVICCIÓN ${signalScore}/100 + MTF ✅ ${entryTelemetry.macroTf}] Señal ${signalType} en ${coin} @ $${entryPrice} (${targetTimeframe}). ATR: $${currentAtr.toFixed(2)}. SL: $${stopLoss.toFixed(2)} (${atrStopMult}x ATR), TP1: $${takeProfit1.toFixed(2)} (1R), TP2: $${takeProfit2.toFixed(2)} (${atrTargetMult}x ATR). Sizing: ${formattedSz} ($${notionalUSD.toFixed(1)} USD, 1x).`
           );
 
           if (isDitto) {
             try {
-              const dittoRes = await this.executeDittoOrder({
+              let limitPx = entryPrice;
+              try {
+                const book = await getBestBidAsk(coin);
+                if (book) {
+                  limitPx = isBuy ? (book.bestBid || entryPrice) : (book.bestAsk || entryPrice);
+                }
+              } catch (_) {}
+
+              const dittoRes = await executeDittoOrder({
+                apiKey: this.config.agentPrivateKey,
                 coin,
                 isBuy,
                 sizeUsd: notionalUSD,
                 leverage: targetLeverage,
                 stopLoss,
                 takeProfit1,
+                limitPrice: limitPx,
               });
 
               if (dittoRes && dittoRes.ok !== false && !dittoRes.error) {
                 this.addLog(
                   'EXECUTION',
-                  `⚡ [DITTO EJECUTADO] ${signalType} $${Math.round(notionalUSD)} USD en ${coin} @ $${entryPrice} (${targetLeverage}x Cross, Convicción ${signalScore}/100). SL: $${stopLoss.toFixed(4)} (-0.9%), TP1: $${takeProfit1.toFixed(4)} (+1.6%), TP2: $${takeProfit2.toFixed(4)} (+2.6%)`
+                  `⚡ [DITTO EJECUTADO] ${signalType} $${Math.round(notionalUSD)} USD en ${coin} @ $${entryPrice} (1x Cross). SL: $${stopLoss.toFixed(2)}, TP1: $${takeProfit1.toFixed(2)}, TP2: $${takeProfit2.toFixed(2)}`
                 );
 
                 this.state.stats.totalTrades++;
@@ -1832,7 +1728,7 @@ export class ServerBotDaemon {
                   takeProfit2: Number(takeProfit2.toFixed(5)),
                   sz: formattedSz,
                   initialSz: formattedSz,
-                  capitalUSD: this.config.capitalPerTrade,
+                  capitalUSD: notionalUSD,
                   leverage: targetLeverage,
                   isTP1Hit: false,
                   entryTime: Date.now(),
@@ -1849,42 +1745,47 @@ export class ServerBotDaemon {
             }
           } else if (exClient) {
             try {
-              const orderRes = await exClient.order({
-                orders: [
-                  {
-                    a: assetIndex,
-                    b: isBuy,
-                    p: formattedPx,
-                    s: formattedSz.toString(),
-                    r: false,
-                    t: { limit: { tif: 'Ioc' } },
-                  },
-                ],
-                grouping: 'na',
+              let limitPx = entryPrice;
+              try {
+                const book = await getBestBidAsk(coin);
+                if (book) {
+                  limitPx = isBuy ? (book.bestBid || entryPrice) : (book.bestAsk || entryPrice);
+                }
+              } catch (_) {}
+
+              const execResult = await executeLimitOrderHyperliquid({
+                exClient,
+                assetIndex,
+                coin,
+                isBuy,
+                size: formattedSz,
+                limitPrice: limitPx,
+                szDecimals,
+                timeoutSec: 60,
+                logFn: (msg) => this.addLog('EXECUTION', msg),
               });
 
-              if (orderRes?.status === 'ok') {
+              if (execResult.success) {
+                const finalPx = parseFloat(execResult.formattedPx) || entryPrice;
                 this.addLog(
                   'EXECUTION',
-                  `⚡ [EJECUTADO] ${signalType} ${formattedSz} ${coin} @ $${entryPrice} (${targetLeverage}x Cross, Convicción ${signalScore}/100). SL: $${stopLoss.toFixed(4)} (-0.9%), TP1: $${takeProfit1.toFixed(4)} (+1.6%), TP2: $${takeProfit2.toFixed(4)} (+2.6%)`
+                  `⚡ [LIMIT ALO/GTC EJECUTADO] ${signalType} ${formattedSz} ${coin} @ $${execResult.formattedPx} (1x Cross). SL: $${stopLoss.toFixed(2)}, TP1: $${takeProfit1.toFixed(2)}, TP2: $${takeProfit2.toFixed(2)}`
                 );
 
-                // Accumulate Ditto tournament volume!
                 this.state.stats.totalTrades++;
                 this.state.stats.totalVolumeUSD += notionalUSD;
 
-                // Track in memory
                 this.state.positions.push({
                   coin,
                   side: signalType,
-                  entryPrice,
-                  currentPrice: entryPrice,
+                  entryPrice: finalPx,
+                  currentPrice: finalPx,
                   stopLoss: Number(stopLoss.toFixed(5)),
                   takeProfit1: Number(takeProfit1.toFixed(5)),
                   takeProfit2: Number(takeProfit2.toFixed(5)),
                   sz: formattedSz,
                   initialSz: formattedSz,
-                  capitalUSD: this.config.capitalPerTrade,
+                  capitalUSD: notionalUSD,
                   leverage: targetLeverage,
                   isTP1Hit: false,
                   entryTime: Date.now(),
@@ -1894,7 +1795,7 @@ export class ServerBotDaemon {
                 });
                 this.saveState();
               } else {
-                this.addLog('ERROR', `Error en DEX al ejecutar ${coin}: ${JSON.stringify(orderRes)}`);
+                this.addLog('ERROR', `Error en DEX al ejecutar ${coin}: ${execResult.error}`);
               }
             } catch (ordErr) {
               this.addLog('ERROR', `Excepción al ejecutar orden ${coin}: ${ordErr.message}`);
@@ -1948,11 +1849,6 @@ export class ServerBotDaemon {
       ? `${this.config.agentPrivateKey.slice(0, 8)}...${this.config.agentPrivateKey.slice(-4)}`
       : 'No configurada';
 
-    const isAll =
-      !this.config.allowedSymbols ||
-      this.config.allowedSymbols.length === 0 ||
-      this.config.allowedSymbols.includes('ALL');
-
     return {
       isActive: this.config.isActive,
       walletAddress: this.config.walletAddress || '',
@@ -1961,21 +1857,20 @@ export class ServerBotDaemon {
       maskedAgentKey: maskedKey,
       capitalPerTrade: this.config.capitalPerTrade,
       leverage: this.config.leverage,
-      allowedSymbols: isAll ? ['TODOS (Perps, Memes y Predictions)'] : this.config.allowedSymbols,
-      isAllMarkets: isAll,
+      allowedSymbols: this.config.allowedSymbols,
       maxConcurrentTrades: this.config.maxConcurrentTrades,
-      timeframe: this.config.timeframe || '1m',
-      scanIntervalSeconds: this.config.scanIntervalSeconds || 6,
-      minSignalScore: this.config.minSignalScore || 55,
-      instantProfitTake: this.config.instantProfitTake ?? true,
-      minInstantProfitUSD: this.config.minInstantProfitUSD ?? 1.50,
+      timeframe: this.config.timeframe || '1h',
+      scanIntervalSeconds: this.config.scanIntervalSeconds || 60,
+      minSignalScore: this.config.minSignalScore || 60,
+      instantProfitTake: this.config.instantProfitTake ?? false,
+      minInstantProfitUSD: this.config.minInstantProfitUSD ?? 2.25,
       maxDrawdownPercent: this.config.maxDrawdownPercent || 0.08,
       longOnly: this.config.longOnly !== false,
       requireMacroTrendConfirmation: this.config.requireMacroTrendConfirmation !== false,
       macroHierarchy: {
-        baseTimeframe: this.config.timeframe || '1m',
-        macroTimeframe: getMacroTimeframe(this.config.timeframe || '1m'),
-        rule: `Scalping ${this.config.timeframe || '1m'} requiere confirmación con ${getMacroTimeframe(this.config.timeframe || '1m')}`,
+        baseTimeframe: this.config.timeframe || '1h',
+        macroTimeframe: getMacroTimeframe(this.config.timeframe || '1h'),
+        rule: `Timeframe ${this.config.timeframe || '1h'} requiere confirmación con ${getMacroTimeframe(this.config.timeframe || '1h')}`,
         active: this.config.requireMacroTrendConfirmation !== false,
       },
       sessionStartBalanceUSD: this.state.sessionStartBalanceUSD || 0,

@@ -231,16 +231,6 @@ export async function fetchHyperliquidClearinghouseState(
   }
 }
 
-export async function fetchHyperliquidOpenOrders(userAddress: string): Promise<any[]> {
-  if (!userAddress || !userAddress.startsWith('0x')) return [];
-  try {
-    return await infoClient.openOrders({ user: userAddress as `0x${string}` });
-  } catch (err) {
-    console.error('Error fetching Hyperliquid open orders:', err);
-    return [];
-  }
-}
-
 export async function executeHyperliquidOrder(params: {
   agentPrivateKey: string;
   coin: string;

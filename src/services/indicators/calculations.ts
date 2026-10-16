@@ -212,21 +212,6 @@ export function calculateBollingerBands(
 }
 
 /**
- * Bollinger Bandwidth (Spread relativo de las bandas para detectar Squeezes)
- */
-export function calculateBollingerBandwidth(
-  candles: Candle[],
-  period: number = 20,
-  stdDevMultiplier: number = 2
-): IndicatorPoint[] {
-  const bbs = calculateBollingerBands(candles, period, stdDevMultiplier);
-  return bbs.map((b) => ({
-    time: b.time,
-    value: b.middle !== 0 ? ((b.upper - b.lower) / b.middle) * 100 : 0,
-  }));
-}
-
-/**
  * Bollinger %B (%b Oscillator): (Close - Lower) / (Upper - Lower)
  */
 export function calculateBollingerPercentB(

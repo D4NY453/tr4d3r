@@ -1,6 +1,6 @@
 import { TradingSignal, ClosedTrade, TelegramConfig } from '@/types';
 
-export const DEFAULT_TELEGRAM_BOT_TOKEN = '8829870430:AAHE9C5U4s8eM4B36omK5tzjGZ1qFb6oRF8';
+export const DEFAULT_TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 export const BOT_USERNAME = 'Fl4shloanarb_bot';
 
 const formatPrice = (p: number) => {

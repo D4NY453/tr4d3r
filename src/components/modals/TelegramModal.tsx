@@ -179,7 +179,7 @@ export const TelegramModal: React.FC = () => {
                 type="text"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="8829870430:AAHE9C5U4s8eM4B36omK5tzjGZ1qFb6oRF8"
+                placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
                 className="w-full bg-[#050608] border border-white/[0.08] focus:border-[#229ED9]/60 rounded-lg px-3 py-2 text-slate-200 font-mono text-xs focus:outline-none"
               />
             </div>

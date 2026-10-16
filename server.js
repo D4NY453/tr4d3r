@@ -1,8 +1,29 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { loadEnv } = require('./lib/env.cjs');
+loadEnv();
 
 const PORT = parseInt(process.env.PORT, 10) || 3001;
+// Seguridad: por defecto solo escucha en localhost. Para exponerlo hay que definir HOST explícitamente.
+const HOST = process.env.HOST || '127.0.0.1';
+const API_TOKEN = (process.env.BOT_API_TOKEN || '').trim();
+const ALLOWED_ORIGINS = new Set([
+  `http://localhost:${PORT}`,
+  `http://127.0.0.1:${PORT}`,
+  'http://localhost:3000', // next dev
+  'http://127.0.0.1:3000',
+]);
+
+function isAuthorized(req) {
+  if (!API_TOKEN) return true;
+  const h = req.headers['authorization'] || '';
+  const given = h.startsWith('Bearer ') ? h.slice(7).trim() : String(req.headers['x-api-token'] || '').trim();
+  const a = Buffer.from(given);
+  const b = Buffer.from(API_TOKEN);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 const STATIC_DIR = path.join(__dirname, 'out');
 
 const MIME_TYPES = {
@@ -54,10 +75,21 @@ function parseRequestBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // CORS: solo orígenes locales (antes era '*', cualquier web podía controlar el bot)
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Token');
+  }
+  const isApi = req.url.startsWith('/api/');
+  // Bloquear peticiones API desde orígenes no permitidos (protección CSRF desde otras webs)
+  if (isApi && origin && !ALLOWED_ORIGINS.has(origin)) {
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Origen no permitido' }));
+    return;
+  }
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -66,6 +98,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   const reqPath = decodeURI(req.url.split('?')[0]);
+
+  if (isApi && !isAuthorized(req)) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No autorizado: falta o es incorrecto BOT_API_TOKEN' }));
+    return;
+  }
 
   // ==========================================
   // 🤖 24/7 AUTONOMOUS BOT REST API ENDPOINTS
@@ -88,43 +126,21 @@ const server = http.createServer(async (req, res) => {
 
       if (reqPath === '/api/bot/start' && req.method === 'POST') {
         const body = await parseRequestBody(req);
-        let key = (body.agentPrivateKey || botDaemon.config.agentPrivateKey || '').trim().replace(/^['"]|['"]$/g, '');
-        let wallet = (body.walletAddress || botDaemon.config.walletAddress || '').trim().replace(/^['"]|['"]$/g, '');
-
-        if (key.startsWith('ditto_sk_') || key.startsWith('ditto_')) {
-          key = key.replace(/\s+/g, '-');
-        } else if (key && !key.startsWith('0x') && /^[0-9a-fA-F]{64}$/.test(key)) {
-          key = '0x' + key;
+        if (body.agentPrivateKey) {
+          console.warn('[Server] Se ignoró agentPrivateKey enviada por API: las claves solo se leen de .env');
         }
-        if (wallet && !wallet.startsWith('0x') && /^[0-9a-fA-F]{40}$/.test(wallet)) {
-          wallet = '0x' + wallet;
-        }
-
-        const tf = body.timeframe || botDaemon.config.timeframe || '1m';
+        const tf = body.timeframe || botDaemon.config.timeframe || '1h';
         const isLongOnly = body.longOnly !== undefined ? Boolean(body.longOnly) : (botDaemon.config.longOnly ?? false);
 
-        botDaemon.saveConfig({
-          walletAddress: wallet,
-          agentPrivateKey: key,
-          capitalPerTrade: body.capitalPerTrade ? Number(body.capitalPerTrade) : botDaemon.config.capitalPerTrade,
-          leverage: body.leverage ? Number(body.leverage) : botDaemon.config.leverage,
-          allowedSymbols: Array.isArray(body.allowedSymbols) ? body.allowedSymbols : [],
-          timeframe: tf,
-          scanIntervalSeconds: body.scanIntervalSeconds ? Number(body.scanIntervalSeconds) : (botDaemon.config.scanIntervalSeconds || 6),
-          maxConcurrentTrades: body.maxConcurrentTrades !== undefined ? Number(body.maxConcurrentTrades) : (botDaemon.config.maxConcurrentTrades || 8),
-          instantProfitTake: body.instantProfitTake !== undefined ? Boolean(body.instantProfitTake) : (botDaemon.config.instantProfitTake ?? true),
-          minInstantProfitUSD: body.minInstantProfitUSD !== undefined ? Number(body.minInstantProfitUSD) : (botDaemon.config.minInstantProfitUSD ?? 1.50),
-          maxDrawdownPercent: body.maxDrawdownPercent !== undefined ? Number(body.maxDrawdownPercent) : (botDaemon.config.maxDrawdownPercent ?? 0.08),
-          longOnly: isLongOnly,
-          minSignalScore: body.minSignalScore ? Number(body.minSignalScore) : (botDaemon.config.minSignalScore || 55),
-          requireMacroTrendConfirmation: body.requireMacroTrendConfirmation !== undefined ? Boolean(body.requireMacroTrendConfirmation) : (botDaemon.config.requireMacroTrendConfirmation ?? true),
-        });
+        // saveConfig aplica los límites de riesgo (apalancamiento 1x, 1 posición, BTC/ETH...)
+        const { agentPrivateKey: _ignored, ...rest } = body;
+        botDaemon.saveConfig({ ...rest, timeframe: tf, longOnly: isLongOnly });
 
         botDaemon.start();
         res.writeHead(200);
         res.end(JSON.stringify({
           success: true,
-          message: `Bot 24/7 activado [${isLongOnly ? 'Solo Compras' : 'Compras y Ventas'}] (Velas ${tf}, escaneo cada ${botDaemon.config.scanIntervalSeconds}s)`,
+          message: `Bot 24/7 activado [${isLongOnly ? 'Solo Compras' : 'Compras y Ventas'}] (Velas ${tf}, análisis al cierre de cada vela)`,
           status: botDaemon.getStatus(),
         }));
         return;
@@ -138,7 +154,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (reqPath === '/api/bot/config' && req.method === 'POST') {
-        const body = await parseRequestBody(req);
+        const { agentPrivateKey: _ignored, ...body } = await parseRequestBody(req);
         botDaemon.saveConfig(body);
         res.writeHead(200);
         res.end(JSON.stringify({ success: true, status: botDaemon.getStatus() }));
@@ -263,6 +279,9 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 HIK453 Terminal con Bot 24/7 corriendo en http://0.0.0.0:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 HIK453 Terminal con Bot 24/7 corriendo en http://${HOST}:${PORT}`);
+  if (HOST !== '127.0.0.1' && HOST !== 'localhost' && !API_TOKEN) {
+    console.warn('⚠️  El servidor está expuesto fuera de localhost SIN BOT_API_TOKEN. Define BOT_API_TOKEN en .env.');
+  }
 });

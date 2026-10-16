@@ -1,3 +1,4 @@
+import { botFetch } from '@/lib/bot-api';
 import { Candle, Ticker24h, Timeframe } from '@/types';
 import { UTCTimestamp } from 'lightweight-charts';
 import {
@@ -586,7 +587,7 @@ export async function fetchBotClosedTrades(): Promise<{
   stats: any;
 }> {
   try {
-    const res = await fetch('/api/bot/closed-trades');
+    const res = await botFetch('/api/bot/closed-trades');
     if (!res.ok) {
       return { closedTrades: [], stats: null };
     }

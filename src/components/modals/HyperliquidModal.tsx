@@ -1,5 +1,6 @@
 'use client';
 
+import { botFetch } from '@/lib/bot-api';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTradingStore } from '@/store/useTradingStore';
 import {
@@ -105,7 +106,7 @@ export const HyperliquidModal: React.FC = () => {
     setMinProfitInput(minVal);
     const parsedMin = parseFloat(minVal);
     try {
-      await fetch('/api/bot/config', {
+      await botFetch('/api/bot/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +120,7 @@ export const HyperliquidModal: React.FC = () => {
   const handleUpdateMaxConcurrent = async (count: number) => {
     updateBotConfig({ maxConcurrentTrades: count });
     try {
-      await fetch('/api/bot/config', {
+      await botFetch('/api/bot/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ maxConcurrentTrades: count }),
@@ -239,7 +240,7 @@ export const HyperliquidModal: React.FC = () => {
   // Poll 24/7 server daemon status
   const fetchServerStatus = async () => {
     try {
-      const res = await fetch('/api/bot/status');
+      const res = await botFetch('/api/bot/status');
       if (res.ok) {
         const data = await res.json();
         setServerStatus(data);
@@ -298,7 +299,7 @@ export const HyperliquidModal: React.FC = () => {
 
     setIsStartingServer(true);
     try {
-      const res = await fetch('/api/bot/start', {
+      const res = await botFetch('/api/bot/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -338,7 +339,7 @@ export const HyperliquidModal: React.FC = () => {
   const handleStopServerBot = async () => {
     setIsStartingServer(true);
     try {
-      const res = await fetch('/api/bot/stop', { method: 'POST' });
+      const res = await botFetch('/api/bot/stop', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         setServerStatus(data.status);

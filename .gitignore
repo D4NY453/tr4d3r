@@ -43,3 +43,10 @@ Thumbs.db
 .idea/
 *.tsbuildinfo
 next-env.d.ts
+
+# Estado y configuración local del bot (pueden contener datos sensibles)
+bot-config.json
+bot-state.json
+bot-risk-state.json
+.env
+!.env.example

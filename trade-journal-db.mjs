@@ -3,9 +3,11 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import Database from 'better-sqlite3';
 
+import { getDataDir } from './lib/risk-manager.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, 'trade-journal.db');
+const DB_PATH = path.join(getDataDir(), 'trade-journal.db');
 
 export class TradeJournalDB {
   constructor(dbPath = DB_PATH) {
